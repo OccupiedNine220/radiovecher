@@ -15,6 +15,9 @@ VOICE_CHANNEL_ID = 1329935439628341289  # ID голосового канала �
 TEXT_CHANNEL_ID = 1351254192282669269   # ID текстового канала для плеера
 ADMIN_CHANNEL_ID = 1327691078899335218  # ID канала для админ-панели
 
+# ID роли администратора
+ADMIN_ROLE_ID = 1280772929822658600     # ID роли, которая считается администратором
+
 # Необходимые разрешения для бота
 BOT_PERMISSIONS = discord.Permissions(
     connect=True,  # Подключение к голосовым каналам
@@ -44,6 +47,18 @@ class MusicCommands(commands.Cog):
             permissions=BOT_PERMISSIONS,
             scopes=("bot", "applications.commands")
         )
+    
+    def has_admin_role(self, user):
+        """Проверка наличия роли администратора у пользователя"""
+        if user.guild_permissions.administrator or user.guild_permissions.manage_guild:
+            return True
+            
+        # Проверка наличия роли администратора
+        for role in user.roles:
+            if role.id == ADMIN_ROLE_ID:
+                return True
+                
+        return False
     
     @commands.Cog.listener()
     async def on_ready(self):
@@ -185,8 +200,8 @@ class MusicCommands(commands.Cog):
     async def start_player(self, interaction: discord.Interaction):
         """Запуск музыкального плеера в указанном голосовом канале"""
         # Проверка прав пользователя
-        if not interaction.user.guild_permissions.manage_guild and not interaction.user.guild_permissions.administrator:
-            await interaction.response.send_message("У вас недостаточно прав для использования этой команды. Требуется право 'Управление сервером'.", ephemeral=True)
+        if not self.has_admin_role(interaction.user):
+            await interaction.response.send_message("У вас недостаточно прав для использования этой команды. Требуется право 'Управление сервером' или роль администратора.", ephemeral=True)
             return
             
         player = await self.get_player(interaction.guild_id)
@@ -208,8 +223,8 @@ class MusicCommands(commands.Cog):
     async def stop_player(self, interaction: discord.Interaction):
         """Остановка музыкального плеера"""
         # Проверка прав пользователя
-        if not interaction.user.guild_permissions.manage_guild and not interaction.user.guild_permissions.administrator:
-            await interaction.response.send_message("У вас недостаточно прав для использования этой команды. Требуется право 'Управление сервером'.", ephemeral=True)
+        if not self.has_admin_role(interaction.user):
+            await interaction.response.send_message("У вас недостаточно прав для использования этой команды. Требуется право 'Управление сервером' или роль администратора.", ephemeral=True)
             return
             
         if interaction.guild_id in self.players:
@@ -335,8 +350,8 @@ class AdminPanelView(discord.ui.View):
     @discord.ui.button(label="▶️ Запустить", style=discord.ButtonStyle.success, custom_id="admin_start")
     async def start_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         # Проверка прав администратора
-        if not interaction.user.guild_permissions.administrator and not interaction.user.guild_permissions.manage_guild:
-            return await interaction.response.send_message("У вас недостаточно прав для использования админ-панели.", ephemeral=True)
+        if not self.cog.has_admin_role(interaction.user):
+            return await interaction.response.send_message("У вас недостаточно прав для использования админ-панели. Требуется право 'Управление сервером' или роль администратора.", ephemeral=True)
         
         # Получаем плеер и запускаем его
         player = await self.cog.get_player(interaction.guild_id)
@@ -358,8 +373,8 @@ class AdminPanelView(discord.ui.View):
     @discord.ui.button(label="⏹️ Остановить", style=discord.ButtonStyle.danger, custom_id="admin_stop")
     async def stop_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         # Проверка прав администратора
-        if not interaction.user.guild_permissions.administrator and not interaction.user.guild_permissions.manage_guild:
-            return await interaction.response.send_message("У вас недостаточно прав для использования админ-панели.", ephemeral=True)
+        if not self.cog.has_admin_role(interaction.user):
+            return await interaction.response.send_message("У вас недостаточно прав для использования админ-панели. Требуется право 'Управление сервером' или роль администратора.", ephemeral=True)
         
         if interaction.guild_id in self.cog.players:
             player = self.cog.players[interaction.guild_id]
@@ -377,8 +392,8 @@ class AdminPanelView(discord.ui.View):
     @discord.ui.button(label="⏭️ Пропустить", style=discord.ButtonStyle.primary, custom_id="admin_skip")
     async def skip_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         # Проверка прав администратора
-        if not interaction.user.guild_permissions.administrator and not interaction.user.guild_permissions.manage_guild:
-            return await interaction.response.send_message("У вас недостаточно прав для использования админ-панели.", ephemeral=True)
+        if not self.cog.has_admin_role(interaction.user):
+            return await interaction.response.send_message("У вас недостаточно прав для использования админ-панели. Требуется право 'Управление сервером' или роль администратора.", ephemeral=True)
         
         if interaction.guild_id in self.cog.players:
             player = self.cog.players[interaction.guild_id]
