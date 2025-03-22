@@ -51,6 +51,12 @@ SPOTIFY_REDIRECT_URI=http://localhost:8888/callback
 RADIO_STREAM_URL=https://rusradio.hostingradio.ru/rusradio96.aacp
 RADIO_NAME=Русское Радио
 RADIO_THUMBNAIL=https://rusradio.ru/design/images/share.jpg
+
+# Настройки Lavalink сервера
+LAVALINK_HOST=localhost
+LAVALINK_PORT=2333
+LAVALINK_PASSWORD=youshallnotpass
+LAVALINK_SECURE=false
 ```
 
 5. Настройте ID каналов:
@@ -87,6 +93,89 @@ RADIO_STREAM_URL=https://radiorecord.hostingradio.ru/rr_main96.aacp
 RADIO_NAME=Радио Рекорд
 RADIO_THUMBNAIL=https://radiorecord.ru/upload/stations_images/record_image600_white_fill.png
 ```
+
+## Настройка Lavalink
+
+Бот поддерживает воспроизведение музыки через Lavalink - мощный сервер для обработки аудио, который обеспечивает высокое качество и поддержку большого количества сервисов.
+
+### Настройка Lavalink сервера
+
+1. Загрузите последнюю версию Lavalink с [официального репозитория](https://github.com/lavalink-devs/Lavalink/releases)
+
+2. Создайте файл `application.yml` рядом с jar-файлом со следующим содержимым:
+```yaml
+server:
+  port: 2333
+  address: 0.0.0.0
+lavalink:
+  server:
+    password: "youshallnotpass"
+    sources:
+      youtube: true
+      bandcamp: true
+      soundcloud: true
+      twitch: true
+      vimeo: true
+      http: true
+      local: false
+    bufferDurationMs: 400
+    youtubePlaylistLoadLimit: 6
+    playerUpdateInterval: 5
+    youtubeSearchEnabled: true
+    soundcloudSearchEnabled: true
+    gc-warnings: true
+
+metrics:
+  prometheus:
+    enabled: false
+    endpoint: /metrics
+
+sentry:
+  dsn: ""
+  environment: ""
+
+logging:
+  file:
+    max-history: 30
+    max-size: 1GB
+  path: ./logs/
+
+  level:
+    root: INFO
+    lavalink: INFO
+```
+
+3. Запустите Lavalink сервер:
+```bash
+java -jar Lavalink.jar
+```
+
+> ⚠️ **Примечание**: Для работы Lavalink требуется Java 11 или выше.
+
+### Настройка бота для работы с Lavalink
+
+1. Убедитесь, что в файле `.env` указаны правильные настройки Lavalink:
+```
+LAVALINK_HOST=localhost  # Хост сервера Lavalink
+LAVALINK_PORT=2333       # Порт сервера Lavalink
+LAVALINK_PASSWORD=youshallnotpass  # Пароль, указанный в application.yml
+LAVALINK_SECURE=false    # Использовать ли SSL (wss) вместо ws
+```
+
+2. В файле `cogs/music_commands.py` убедитесь, что опция `USE_LAVALINK` включена:
+```python
+# Настройка использования Lavalink
+USE_LAVALINK = True  # Установите True для использования Lavalink
+```
+
+### Преимущества Lavalink
+
+- Поддержка большего количества источников аудио (YouTube, SoundCloud, Bandcamp, Twitch и др.)
+- Лучшее качество звука и стабильность воспроизведения
+- Более быстрая буферизация и меньшая задержка при воспроизведении
+- Возможность загружать целые плейлисты
+- Поддержка прямых эфиров и стримов
+- Меньшая нагрузка на бота и Discord API
 
 ## Запуск
 

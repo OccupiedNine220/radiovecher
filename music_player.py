@@ -54,6 +54,9 @@ class MusicPlayer:
         self.is_playing = False
         self.reconnect_attempts = 0
         self.max_reconnect_attempts = 5
+        self.is_paused = False
+        self.skip_votes = set()  # Множество ID пользователей, проголосовавших за пропуск
+        self.votes_required = 3  # Количество голосов, необходимое для пропуска
         
         # Настройка Spotify клиента
         if SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET:
@@ -108,9 +111,13 @@ class MusicPlayer:
                 'source': 'stream'
             }
             
+            # Сбрасываем голоса при возврате к радио
+            self.skip_votes.clear()
+            
             source = discord.FFmpegPCMAudio(RADIO_STREAM_URL, **FFMPEG_OPTIONS)
             self.voice_client.play(source, after=self._play_next_or_radio)
             self.is_playing = True
+            self.is_paused = False
             
             # Отправка информации о текущем треке
             await self.send_now_playing_embed()
@@ -179,9 +186,13 @@ class MusicPlayer:
             if self.voice_client.is_playing():
                 self.voice_client.stop()
             
+            # Сбрасываем голоса при смене трека
+            self.skip_votes.clear()
+            
             source = discord.FFmpegPCMAudio(track_info['url'], **FFMPEG_OPTIONS)
             self.voice_client.play(source, after=self._play_next_or_radio)
             self.is_playing = True
+            self.is_paused = False
             
             # Отправка информации о текущем треке
             await self.send_now_playing_embed()
@@ -286,6 +297,59 @@ class MusicPlayer:
             return True
         return False
     
+    async def vote_skip(self, user_id):
+        """Голосование за пропуск трека"""
+        if not self.is_playing:
+            return False, "Сейчас ничего не воспроизводится."
+        
+        # Проверка, голосовал ли уже пользователь
+        if user_id in self.skip_votes:
+            return False, "Вы уже проголосовали за пропуск трека."
+        
+        # Добавление голоса
+        self.skip_votes.add(user_id)
+        
+        # Получаем количество людей в голосовом канале (не считая ботов)
+        guild = self.bot.get_guild(self.guild_id)
+        if not guild:
+            return False, "Не удалось получить информацию о сервере."
+        
+        voice_channel = guild.get_channel(self.voice_channel_id)
+        if not voice_channel:
+            return False, "Не удалось получить информацию о голосовом канале."
+        
+        members_count = sum(1 for member in voice_channel.members if not member.bot)
+        
+        # Вычисляем необходимое количество голосов (половина присутствующих, минимум 2)
+        required_votes = max(2, members_count // 2)
+        
+        current_votes = len(self.skip_votes)
+        
+        if current_votes >= required_votes:
+            # Достаточно голосов для пропуска
+            self.skip_votes.clear()  # Сбрасываем голоса
+            success = await self.skip()
+            return success, "Трек пропущен по результатам голосования."
+        else:
+            # Недостаточно голосов
+            return False, f"Голос учтён. Необходимо ещё {required_votes - current_votes} голосов для пропуска трека ({current_votes}/{required_votes})."
+    
+    async def pause(self):
+        """Приостановка воспроизведения"""
+        if self.voice_client and self.voice_client.is_playing():
+            self.voice_client.pause()
+            self.is_paused = True
+            return True
+        return False
+    
+    async def resume(self):
+        """Возобновление воспроизведения"""
+        if self.voice_client and self.is_paused:
+            self.voice_client.resume()
+            self.is_paused = False
+            return True
+        return False
+    
     async def stop(self):
         """Остановка воспроизведения и очистка очереди"""
         if self.voice_client and self.voice_client.is_connected():
@@ -293,6 +357,8 @@ class MusicPlayer:
                 self.voice_client.stop()
             self.queue = []
             self.is_playing = False
+            self.is_paused = False
+            self.skip_votes.clear()  # Сбрасываем голоса при остановке
             return True
         return False
     
@@ -350,14 +416,30 @@ class MusicControlView(discord.ui.View):
     
     @discord.ui.button(label="⏭️ Пропустить", style=discord.ButtonStyle.primary)
     async def skip_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.player.skip()
-        await interaction.response.send_message("Трек пропущен.", ephemeral=True)
+        # Проверяем через голосование
+        success, message = await self.player.vote_skip(interaction.user.id)
+        await interaction.response.send_message(message, ephemeral=True)
     
     @discord.ui.button(label="⏹️ Стоп", style=discord.ButtonStyle.danger)
     async def stop_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         await self.player.stop()
         await self.player.play_default_radio()
         await interaction.response.send_message(f"Воспроизведение остановлено. Возврат к {RADIO_NAME}.", ephemeral=True)
+    
+    @discord.ui.button(label="⏯️ Пауза/Продолжить", style=discord.ButtonStyle.secondary)
+    async def pause_resume_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.player.is_paused:
+            success = await self.player.resume()
+            if success:
+                await interaction.response.send_message("Воспроизведение возобновлено.", ephemeral=True)
+            else:
+                await interaction.response.send_message("Нечего возобновлять.", ephemeral=True)
+        else:
+            success = await self.player.pause()
+            if success:
+                await interaction.response.send_message("Воспроизведение приостановлено.", ephemeral=True)
+            else:
+                await interaction.response.send_message("Нечего приостанавливать.", ephemeral=True)
     
     @discord.ui.button(label="🎵 Добавить трек", style=discord.ButtonStyle.success)
     async def add_track_button(self, interaction: discord.Interaction, button: discord.ui.Button):
