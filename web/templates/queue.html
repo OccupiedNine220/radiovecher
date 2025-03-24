@@ -92,11 +92,11 @@
                         <div class="card h-100 now-playing">
                             <div class="card-header">
                                 <i class="fas fa-headphones me-2"></i> Сейчас играет
-                            </div>
+                                        </div>
                             <div class="card-body text-center" id="currentTrackContainer">
                                 <div class="current-track-thumbnail mb-3" id="currentTrackImage">
                                     <img src="{{ url_for('static', filename='img/default-music.jpg') }}" alt="Текущий трек">
-                                </div>
+                                    </div>
                                 <h4 id="currentTrackTitle">Загрузка...</h4>
                                 <p class="text-secondary" id="currentTrackAuthor">Радио Вечер</p>
                                 
@@ -110,12 +110,12 @@
                                     <button class="btn btn-icon btn-info" id="mobileSwitchRadioButton">
                                         <i class="fas fa-broadcast-tower"></i>
                                     </button>
-                                </div>
                             </div>
                         </div>
                     </div>
-                    
-                    <!-- Очередь треков -->
+                </div>
+                
+                <!-- Очередь треков -->
                     <div class="col-lg-7">
                         <div class="card h-100">
                             <div class="card-header d-flex justify-content-between align-items-center">
@@ -191,10 +191,10 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="mb-3">
+                        <div class="mb-3">
                         <label for="trackUrl" class="form-label">URL или название трека</label>
                         <input type="text" class="search-input" id="trackUrl" placeholder="Вставьте URL или введите название для поиска">
-                    </div>
+                            </div>
                     
                     <div id="searchResults" class="mt-3" style="display: none;">
                         <h6 class="mb-3">Результаты поиска:</h6>
@@ -219,7 +219,7 @@
                 <div class="modal-header">
                     <h5 class="modal-title" id="smartPlaylistModalLabel">Создать умный плейлист</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
+            </div>
                 <div class="modal-body">
                     <p>Создать плейлист из похожих треков на основе:</p>
                     <h5 id="smartPlaylistTrackTitle" class="mb-3"></h5>
@@ -227,20 +227,20 @@
                     <div class="mb-3">
                         <label for="playlistSize" class="form-label">Количество треков</label>
                         <input type="range" class="form-range" id="playlistSize" min="3" max="10" value="5">
-                        <div class="d-flex justify-content-between">
+            <div class="d-flex justify-content-between">
                             <span>3</span>
                             <span id="playlistSizeValue">5</span>
                             <span>10</span>
-                        </div>
+        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
                     <button type="button" class="btn btn-primary" id="createSmartPlaylistButton">Создать</button>
-                </div>
+        </div>
+            </div>
             </div>
         </div>
-    </div>
     
     <!-- Уведомления -->
     <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer"></div>

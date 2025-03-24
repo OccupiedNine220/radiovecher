@@ -1,0 +1,707 @@
+:root {
+    --primary-color: #7289da;
+    --primary-dark: #5b6eae;
+    --secondary-color: #99aab5;
+    --background-dark: #23272a;
+    --background-light: #2c2f33;
+    --discord-blurple: #5865F2;
+    --discord-green: #57F287;
+    --discord-yellow: #FEE75C;
+    --discord-red: #ED4245;
+    --text-light: #ffffff;
+    --text-secondary: #b9bbbe;
+    --card-background: #36393f;
+    --card-border-radius: 10px;
+    --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--background-dark);
+    color: var(--text-light);
+    line-height: 1.6;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+}
+
+.animated-bg {
+    position: relative;
+    background: var(--background-dark);
+    min-height: 100vh;
+}
+
+.animated-bg::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(125deg, var(--background-dark) 0%, var(--background-light) 100%);
+    z-index: -1;
+}
+
+.container {
+    max-width: 1200px;
+    padding: 0 15px;
+    margin: 0 auto;
+}
+
+/* Карточки */
+.card {
+    background-color: var(--card-background);
+    border: none;
+    border-radius: var(--card-border-radius);
+    box-shadow: var(--card-shadow);
+    margin-bottom: 20px;
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+}
+
+.card-header {
+    background-color: rgba(0, 0, 0, 0.15);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 15px 20px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+}
+
+.card-header i {
+    margin-right: 10px;
+    color: var(--primary-color);
+}
+
+.card-body {
+    padding: 20px;
+}
+
+/* Серверы */
+.server-card {
+    transition: all 0.3s ease;
+    background: linear-gradient(145deg, var(--card-background), #3a3d44);
+}
+
+.server-card:hover {
+    transform: scale(1.02);
+    background: linear-gradient(145deg, #3a3d44, var(--card-background));
+}
+
+.server-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background-color: var(--primary-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 15px;
+    font-size: 18px;
+    font-weight: bold;
+    overflow: hidden;
+}
+
+.server-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.server-status {
+    font-size: 12px;
+    border-radius: 20px;
+    padding: 2px 8px;
+    display: inline-block;
+}
+
+.status-connected {
+    background-color: var(--discord-green);
+    color: #fff;
+}
+
+.status-disconnected {
+    background-color: var(--discord-red);
+    color: #fff;
+}
+
+/* Кнопки */
+.btn {
+    border-radius: 5px;
+    font-weight: 500;
+    padding: 8px 16px;
+    transition: all 0.2s ease;
+    text-transform: none;
+}
+
+.btn-primary {
+    background-color: var(--discord-blurple);
+    border-color: var(--discord-blurple);
+}
+
+.btn-primary:hover, .btn-primary:focus {
+    background-color: var(--primary-dark);
+    border-color: var(--primary-dark);
+    transform: translateY(-2px);
+}
+
+.btn-info {
+    background-color: var(--discord-green);
+    border-color: var(--discord-green);
+    color: white;
+}
+
+.btn-info:hover, .btn-info:focus {
+    background-color: #45d070;
+    border-color: #45d070;
+    color: white;
+    transform: translateY(-2px);
+}
+
+.btn-danger {
+    background-color: var(--discord-red);
+    border-color: var(--discord-red);
+}
+
+.btn-danger:hover, .btn-danger:focus {
+    background-color: #d63a3e;
+    border-color: #d63a3e;
+    transform: translateY(-2px);
+}
+
+/* Радиоволны */
+.radio-wave {
+    display: flex;
+    align-items: center;
+    height: 50px;
+}
+
+.radio-wave span {
+    display: block;
+    width: 6px;
+    height: 20px;
+    margin: 0 4px;
+    background-color: var(--primary-color);
+    border-radius: 3px;
+    animation: wave 1.2s infinite ease-in-out;
+}
+
+.radio-wave span:nth-child(2) {
+    animation-delay: 0.1s;
+}
+
+.radio-wave span:nth-child(3) {
+    animation-delay: 0.2s;
+}
+
+.radio-wave span:nth-child(4) {
+    animation-delay: 0.3s;
+}
+
+.radio-wave span:nth-child(5) {
+    animation-delay: 0.4s;
+}
+
+@keyframes wave {
+    0%, 100% {
+        height: 20px;
+    }
+    50% {
+        height: 40px;
+    }
+}
+
+/* Радио-карточки */
+.radio-card {
+    background-color: var(--card-background);
+    border-radius: var(--card-border-radius);
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.radio-card.active {
+    border-color: var(--primary-color);
+    background-color: rgba(114, 137, 218, 0.1);
+}
+
+.radio-card:hover {
+    transform: translateY(-5px);
+}
+
+.radio-card img {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-bottom: 15px;
+}
+
+/* Список треков */
+.queue-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.queue-item {
+    background-color: rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    transition: background-color 0.2s ease;
+}
+
+.queue-item:hover {
+    background-color: rgba(0, 0, 0, 0.2);
+}
+
+.queue-number {
+    font-size: 18px;
+    font-weight: bold;
+    margin-right: 15px;
+    color: var(--primary-color);
+    width: 30px;
+    text-align: center;
+}
+
+.queue-thumbnail {
+    width: 60px;
+    height: 60px;
+    border-radius: 5px;
+    margin-right: 15px;
+    object-fit: cover;
+}
+
+.queue-info {
+    flex: 1;
+}
+
+.queue-title {
+    font-weight: 600;
+    font-size: 16px;
+    margin: 0 0 5px;
+}
+
+.queue-source {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    background-color: rgba(0, 0, 0, 0.2);
+    margin-right: 10px;
+}
+
+/* Текущий трек */
+.current-track {
+    display: flex;
+    align-items: center;
+    padding: 20px;
+    background: linear-gradient(145deg, rgba(114, 137, 218, 0.2), rgba(114, 137, 218, 0.05));
+    border-radius: var(--card-border-radius);
+    margin-bottom: 20px;
+}
+
+.track-thumbnail {
+    width: 100px;
+    height: 100px;
+    border-radius: 5px;
+    margin-right: 20px;
+    object-fit: cover;
+}
+
+.track-info {
+    flex: 1;
+}
+
+.track-title {
+    font-size: 22px;
+    font-weight: 700;
+    margin: 0 0 5px;
+}
+
+.track-source {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 14px;
+    background-color: var(--discord-blurple);
+    margin-right: 10px;
+}
+
+.track-controls {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.control-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.control-btn:hover {
+    background-color: var(--primary-color);
+    transform: scale(1.1);
+}
+
+/* Анимация проигрывания */
+.playing-animation {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    margin-left: 10px;
+}
+
+.playing-animation span {
+    display: block;
+    width: 3px;
+    height: 15px;
+    background-color: var(--primary-color);
+    border-radius: 1px;
+    animation: soundBars 1.5s infinite ease-in-out;
+}
+
+.playing-animation span:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.playing-animation span:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+.playing-animation span:nth-child(4) {
+    animation-delay: 0.6s;
+}
+
+@keyframes soundBars {
+    0%, 100% {
+        height: 5px;
+    }
+    50% {
+        height: 15px;
+    }
+}
+
+/* Прогресс-бар */
+.progress-container {
+    width: 100%;
+    height: 6px;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+    margin: 10px 0;
+    position: relative;
+}
+
+.progress-bar {
+    height: 100%;
+    background-color: var(--primary-color);
+    border-radius: 3px;
+    width: 30%;
+    transition: width 1s linear;
+}
+
+.progress-time {
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-top: 5px;
+}
+
+/* Списки */
+.list-group-item {
+    background-color: transparent;
+    border-color: rgba(255, 255, 255, 0.05);
+    color: var(--text-light);
+}
+
+.list-group-item:first-child {
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+}
+
+.list-group-item:last-child {
+    border-bottom-left-radius: 5px;
+    border-bottom-right-radius: 5px;
+}
+
+/* Объемный эффект для заголовка */
+.display-4 {
+    color: white;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    letter-spacing: -1px;
+    font-weight: 700;
+}
+
+/* Футер */
+footer {
+    background-color: var(--background-light);
+    padding: 20px 0;
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+/* Адаптивные стили */
+@media (max-width: 768px) {
+    .current-track {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .track-thumbnail {
+        margin-right: 0;
+        margin-bottom: 15px;
+        width: 100%;
+        height: auto;
+        max-height: 200px;
+    }
+    
+    .track-controls {
+        margin-top: 15px;
+    }
+    
+    .queue-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .queue-thumbnail {
+        margin-right: 0;
+        margin-bottom: 10px;
+        width: 100%;
+        height: auto;
+        max-height: 150px;
+    }
+    
+    .queue-number {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background-color: var(--card-background);
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+}
+
+/* Стили для формы авторизации */
+.login-container {
+    max-width: 500px;
+    margin: 50px auto;
+}
+
+.login-card {
+    background-color: var(--card-background);
+    border-radius: var(--card-border-radius);
+    box-shadow: var(--card-shadow);
+    padding: 30px;
+    text-align: center;
+}
+
+.login-header {
+    margin-bottom: 30px;
+}
+
+.discord-btn {
+    background-color: var(--discord-blurple);
+    color: white;
+    font-size: 18px;
+    padding: 12px 24px;
+    border-radius: 5px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: all 0.3s ease;
+    text-decoration: none;
+}
+
+.discord-btn:hover {
+    background-color: #4752c4;
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(88, 101, 242, 0.4);
+}
+
+.discord-btn i {
+    font-size: 24px;
+}
+
+/* Стили профиля пользователя */
+.user-profile {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 15px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 5px;
+    margin-bottom: 20px;
+}
+
+.user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    overflow: hidden;
+}
+
+.user-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.user-name {
+    font-weight: 600;
+    color: white;
+}
+
+/* Навигационное меню */
+.navbar {
+    background-color: var(--background-light);
+    padding: 15px 0;
+    margin-bottom: 30px;
+}
+
+.navbar-brand {
+    color: white;
+    font-weight: 700;
+    font-size: 22px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.navbar-brand img {
+    height: 35px;
+}
+
+.navbar-nav .nav-link {
+    color: var(--text-secondary);
+    padding: 8px 15px;
+    margin: 0 5px;
+    border-radius: 5px;
+    transition: all 0.2s ease;
+}
+
+.navbar-nav .nav-link:hover, 
+.navbar-nav .nav-link.active {
+    color: white;
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Загрузка и добавление треков */
+.add-track-form {
+    margin-bottom: 20px;
+}
+
+.input-group {
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.form-control {
+    background-color: transparent;
+    border: none;
+    color: white;
+    padding: 12px 15px;
+}
+
+.form-control:focus {
+    background-color: rgba(0, 0, 0, 0.4);
+    box-shadow: none;
+    color: white;
+}
+
+.form-control::placeholder {
+    color: var(--text-secondary);
+}
+
+/* Оповещения */
+.alert {
+    border-radius: 5px;
+    padding: 15px;
+    margin-bottom: 20px;
+    border: none;
+}
+
+.alert-success {
+    background-color: rgba(87, 242, 135, 0.2);
+    color: var(--discord-green);
+}
+
+.alert-danger {
+    background-color: rgba(237, 66, 69, 0.2);
+    color: var(--discord-red);
+}
+
+.alert-info {
+    background-color: rgba(88, 101, 242, 0.2);
+    color: var(--discord-blurple);
+}
+
+/* Лоадер */
+.loader-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 300px;
+}
+
+.loader {
+    width: 50px;
+    height: 50px;
+    border: 5px solid rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    border-top-color: var(--primary-color);
+    animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Значки и иконки */
+.badge {
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-weight: 500;
+    font-size: 12px;
+}
+
+/* Модальное окно */
+.modal-content {
+    background-color: var(--card-background);
+    border-radius: var(--card-border-radius);
+    border: none;
+}
+
+.modal-header {
+    border-bottom-color: rgba(255, 255, 255, 0.05);
+}
+
+.modal-footer {
+    border-top-color: rgba(255, 255, 255, 0.05);
+} 

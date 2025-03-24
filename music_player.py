@@ -6,39 +6,39 @@ import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 from dotenv import load_dotenv
 
-# Загрузка переменных окружения
+# 🔑 ЗАГРУЗКА ПЕРЕМЕННЫХ ОКРУЖЕНИЯ - КРИТИЧЕСКИ ВАЖНО!!! 🔑
 load_dotenv()
 
-# Настройка Spotify API
+# 🎵 НАСТРОЙКА SPOTIFY API - ДЛЯ РАБОТЫ С ПЛЕЙЛИСТАМИ SPOTIFY!!! 🎵
 SPOTIFY_CLIENT_ID = os.getenv('SPOTIFY_CLIENT_ID')
 SPOTIFY_CLIENT_SECRET = os.getenv('SPOTIFY_CLIENT_SECRET')
 
-# Настройки радио из .env
+# 📻 НАСТРОЙКИ РАДИО ИЗ .ENV - МОЖНО ПЕРЕОПРЕДЕЛИТЬ, НО НЕ РЕКОМЕНДУЕТСЯ!!! 📻
 RADIO_STREAM_URL = os.getenv('RADIO_STREAM_URL', 'https://rusradio.hostingradio.ru/rusradio96.aacp')
 RADIO_NAME = os.getenv('RADIO_NAME', 'Русское Радио')
 RADIO_THUMBNAIL = os.getenv('RADIO_THUMBNAIL', 'https://rusradio.ru/design/images/share.jpg')
 
-# Настройки для yt-dlp
+# ⚙️ НАСТРОЙКИ ДЛЯ YT-DLP - НЕ ТРОГАЙ, ЕСЛИ НЕ ХОЧЕШЬ ПОЛОМАТЬ!!! ⚙️
 YTDL_OPTIONS = {
-    'format': 'bestaudio/best',
-    'extractaudio': True,
-    'audioformat': 'mp3',
-    'outtmpl': '%(extractor)s-%(id)s-%(title)s.%(ext)s',
-    'restrictfilenames': True,
-    'noplaylist': True,
-    'nocheckcertificate': True,
-    'ignoreerrors': False,
-    'logtostderr': False,
-    'quiet': True,
-    'no_warnings': True,
-    'default_search': 'auto',
-    'source_address': '0.0.0.0',
+    'format': 'bestaudio/best',  # 🎧 САМОЕ ЛУЧШЕЕ КАЧЕСТВО ЗВУКА!!! 🎧
+    'extractaudio': True,       # 🔈 ИЗВЛЕКАЕМ ТОЛЬКО АУДИО!!! 🔈
+    'audioformat': 'mp3',       # 🎵 ФОРМАТ MP3 - САМЫЙ СОВМЕСТИМЫЙ!!! 🎵
+    'outtmpl': '%(extractor)s-%(id)s-%(title)s.%(ext)s',  # 📝 ШАБЛОН ИМЕНИ ФАЙЛА!!! 📝
+    'restrictfilenames': True,  # 🛡️ ЗАЩИТА ОТ НЕПРАВИЛЬНЫХ СИМВОЛОВ В ИМЕНАХ!!! 🛡️
+    'noplaylist': True,         # ❌ НЕ ЗАГРУЖАЕМ ПЛЕЙЛИСТЫ ЦЕЛИКОМ!!! ❌
+    'nocheckcertificate': True, # 🔓 НЕ ПРОВЕРЯЕМ СЕРТИФИКАТЫ (ИНАЧЕ МОЖЕТ НЕ РАБОТАТЬ)!!! 🔓
+    'ignoreerrors': False,      # ⚠️ НЕ ИГНОРИРУЕМ ОШИБКИ - ТАК БЕЗОПАСНЕЕ!!! ⚠️
+    'logtostderr': False,       # 🔇 НЕ ВЫВОДИМ ЛОГИ В КОНСОЛЬ - ОНИ ЗАСОРЯЮТ ЕЕ!!! 🔇
+    'quiet': True,              # 🤫 ТИХИЙ РЕЖИМ - БЕЗ ЛИШНИХ СООБЩЕНИЙ!!! 🤫
+    'no_warnings': True,        # 🚫 БЕЗ ПРЕДУПРЕЖДЕНИЙ - МЕНЬШЕ ШУМА!!! 🚫
+    'default_search': 'auto',   # 🔍 АВТОМАТИЧЕСКИЙ ПОИСК - УДОБНО!!! 🔍
+    'source_address': '0.0.0.0',  # 🌐 СЛУШАЕМ ВСЕ СЕТЕВЫЕ ИНТЕРФЕЙСЫ!!! 🌐
 }
 
-# Настройки для FFmpeg
+# 🛠️ НАСТРОЙКИ ДЛЯ FFMPEG - ДЛЯ ИДЕАЛЬНОГО ВОСПРОИЗВЕДЕНИЯ!!! 🛠️
 FFMPEG_OPTIONS = {
-    'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
-    'options': '-vn',
+    'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',  # 🔄 АВТОМАТИЧЕСКОЕ ПЕРЕПОДКЛЮЧЕНИЕ!!! 🔄
+    'options': '-vn',  # 📺 УДАЛЯЕМ ВИДЕОПОТОК - НАМ НУЖЕН ТОЛЬКО ЗВУК!!! 📺
 }
 
 class MusicPlayer:
@@ -55,10 +55,10 @@ class MusicPlayer:
         self.reconnect_attempts = 0
         self.max_reconnect_attempts = 5
         self.is_paused = False
-        self.skip_votes = set()  # Множество ID пользователей, проголосовавших за пропуск
-        self.votes_required = 3  # Количество голосов, необходимое для пропуска
+        self.skip_votes = set()  # 🗳️ МНОЖЕСТВО ID ПОЛЬЗОВАТЕЛЕЙ, ПРОГОЛОСОВАВШИХ ЗА ПРОПУСК!!! 🗳️
+        self.votes_required = 3  # 🔢 КОЛИЧЕСТВО ГОЛОСОВ, НЕОБХОДИМОЕ ДЛЯ ПРОПУСКА!!! ДЕМОКРАТИЯ!!! 🔢
         
-        # Настройка Spotify клиента
+        # 🎵 НАСТРОЙКА SPOTIFY КЛИЕНТА - ДЛЯ ВОСПРОИЗВЕДЕНИЯ С SPOTIFY!!! 🎵
         if SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET:
             self.sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
                 client_id=SPOTIFY_CLIENT_ID,
@@ -68,11 +68,11 @@ class MusicPlayer:
             self.sp = None
     
     async def connect(self):
-        """Подключение к голосовому каналу"""
+        """🔌 ПОДКЛЮЧЕНИЕ К ГОЛОСОВОМУ КАНАЛУ - ПЕРВЫЙ ШАГ К ИДЕАЛЬНОЙ МУЗЫКЕ!!! 🔌"""
         try:
-            # Проверяем, указан ли ID голосового канала
+            # 🔍 ПРОВЕРЯЕМ, УКАЗАН ЛИ ID ГОЛОСОВОГО КАНАЛА!!! 🔍
             if not self.voice_channel_id:
-                print(f"Ошибка: ID голосового канала не указан для сервера {self.guild_id}")
+                print(f"❌ ОШИБКА: ID ГОЛОСОВОГО КАНАЛА НЕ УКАЗАН ДЛЯ СЕРВЕРА {self.guild_id}!!! ❌")
                 return False
                 
             channel = self.bot.get_channel(self.voice_channel_id)
@@ -82,7 +82,7 @@ class MusicPlayer:
                     channel = guild.get_channel(self.voice_channel_id)
             
             if not channel:
-                raise ValueError(f"Не удалось найти голосовой канал с ID {self.voice_channel_id}")
+                raise ValueError(f"❌ НЕ УДАЛОСЬ НАЙТИ ГОЛОСОВОЙ КАНАЛ С ID {self.voice_channel_id}!!! КАТАСТРОФА!!! ❌")
             
             if self.voice_client and self.voice_client.is_connected():
                 await self.voice_client.move_to(channel)
@@ -92,17 +92,17 @@ class MusicPlayer:
             self.reconnect_attempts = 0
             return True
         except Exception as e:
-            print(f"Ошибка при подключении к голосовому каналу: {e}")
+            print(f"⚠️ ОШИБКА ПРИ ПОДКЛЮЧЕНИИ К ГОЛОСОВОМУ КАНАЛУ: {e}!!! СРОЧНО ИСПРАВЬ!!! ⚠️")
             return False
     
     async def disconnect(self):
-        """Отключение от голосового канала"""
+        """🔌 ОТКЛЮЧЕНИЕ ОТ ГОЛОСОВОГО КАНАЛА - ПРОЩАЕМСЯ КРАСИВО!!! 🔌"""
         if self.voice_client and self.voice_client.is_connected():
             await self.voice_client.disconnect()
             self.voice_client = None
     
     async def play_default_radio(self):
-        """Воспроизведение радио по умолчанию"""
+        """📻 ВОСПРОИЗВЕДЕНИЕ РАДИО ПО УМОЛЧАНИЮ - ЛУЧШАЯ МУЗЫКА БЕЗ ПРОБЛЕМ!!! 📻"""
         if not self.voice_client or not self.voice_client.is_connected():
             success = await self.connect()
             if not success:
@@ -116,7 +116,7 @@ class MusicPlayer:
                 'source': 'stream'
             }
             
-            # Сбрасываем голоса при возврате к радио
+            # 🗑️ СБРАСЫВАЕМ ГОЛОСА ПРИ ВОЗВРАТЕ К РАДИО!!! 🗑️
             self.skip_votes.clear()
             
             source = discord.FFmpegPCMAudio(RADIO_STREAM_URL, **FFMPEG_OPTIONS)
@@ -124,11 +124,11 @@ class MusicPlayer:
             self.is_playing = True
             self.is_paused = False
             
-            # Отправка информации о текущем треке
+            # 📨 ОТПРАВКА ИНФОРМАЦИИ О ТЕКУЩЕМ ТРЕКЕ!!! 📨
             await self.send_now_playing_embed()
             return True
         except Exception as e:
-            print(f"Ошибка при воспроизведении радио: {e}")
+            print(f"❌ ОШИБКА ПРИ ВОСПРОИЗВЕДЕНИИ РАДИО: {e}!!! НЕ ПАНИКУЙ, СЕЙЧАС ПОЧИНИМ!!! ❌")
             self.reconnect_attempts += 1
             if self.reconnect_attempts < self.max_reconnect_attempts:
                 await asyncio.sleep(2)
@@ -136,15 +136,15 @@ class MusicPlayer:
             return False
     
     def _play_next_or_radio(self, error=None):
-        """Callback для воспроизведения следующего трека или возврата к радио"""
+        """🔄 CALLBACK ДЛЯ ВОСПРОИЗВЕДЕНИЯ СЛЕДУЮЩЕГО ТРЕКА ИЛИ ВОЗВРАТА К РАДИО!!! 🔄"""
         if error:
-            print(f"Ошибка воспроизведения: {error}")
+            print(f"⚠️ ОШИБКА ВОСПРОИЗВЕДЕНИЯ: {error}!!! НО МЫ НЕ СДАЕМСЯ!!! ⚠️")
             self.reconnect_attempts += 1
             if self.reconnect_attempts >= self.max_reconnect_attempts:
-                print("Превышено максимальное количество попыток переподключения")
+                print("❌ ПРЕВЫШЕНО МАКСИМАЛЬНОЕ КОЛИЧЕСТВО ПОПЫТОК ПЕРЕПОДКЛЮЧЕНИЯ!!! ТРЕБУЕТСЯ РУЧНОЕ ВМЕШАТЕЛЬСТВО!!! ❌")
                 return
             
-            # Попытка переподключения и воспроизведения
+            # 🔄 ПОПЫТКА ПЕРЕПОДКЛЮЧЕНИЯ И ВОСПРОИЗВЕДЕНИЯ!!! 🔄
             asyncio.run_coroutine_threadsafe(self._handle_playback_error(), self.bot.loop)
             return
         
