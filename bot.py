@@ -5,11 +5,28 @@ from dotenv import load_dotenv
 from music_player import MusicPlayer
 import wavelink
 from lavalink_player import LAVALINK_HOST, LAVALINK_PORT, LAVALINK_PASSWORD, LAVALINK_SECURE
+import datetime
+
+# Импорт веб-сервера
+try:
+    from web.server import initialize_web_server, get_web_url
+    WEB_ENABLED = True
+except ImportError:
+    print("Веб-сервер не загружен. Проверьте наличие директории 'web' и необходимых зависимостей.")
+    WEB_ENABLED = False
 
 # Загрузка переменных окружения
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 RADIO_NAME = os.getenv('RADIO_NAME', 'Русское Радио')
+RETRO_FM_NAME = os.getenv('RETRO_FM_NAME', 'Ретро FM')
+
+# Настройка Flask порта
+FLASK_PORT = os.getenv('FLASK_PORT', '5000')
+os.environ['FLASK_PORT'] = FLASK_PORT
+
+# Глобальная переменная для использования Lavalink
+USE_LAVALINK = os.getenv('USE_LAVALINK', 'true').lower() == 'true'
 
 # Настройка интентов Discord
 intents = discord.Intents.default()
@@ -32,6 +49,28 @@ class RadioVecherBot(commands.Bot):
         )
         self.players = {}
         self.wavelink_node = None
+        self.current_radio = {
+            'name': RADIO_NAME,
+            'url': os.getenv('RADIO_STREAM_URL', 'https://rusradio.hostingradio.ru/rusradio96.aacp'),
+            'thumbnail': os.getenv('RADIO_THUMBNAIL', 'https://rusradio.ru/design/images/share.jpg')
+        }
+        
+        # Доступные радиостанции
+        self.available_radios = {
+            'русское': {
+                'name': RADIO_NAME,
+                'url': os.getenv('RADIO_STREAM_URL', 'https://rusradio.hostingradio.ru/rusradio96.aacp'),
+                'thumbnail': os.getenv('RADIO_THUMBNAIL', 'https://rusradio.ru/design/images/share.jpg')
+            },
+            'ретро': {
+                'name': RETRO_FM_NAME,
+                'url': os.getenv('RETRO_FM_STREAM_URL', 'https://retro.hostingradio.ru:8043/retro256.mp3'),
+                'thumbnail': os.getenv('RETRO_FM_THUMBNAIL', 'https://retrofm.ru/retrosite/upload/cache/b1-logo-retro-fm-240x240-crop-ffffff.webp')
+            }
+        }
+        
+        # Флаг, указывающий, инициализирован ли уже веб-сервер
+        self.web_server_initialized = False
         
     async def setup_hook(self):
         """Хук настройки, вызываемый при запуске бота"""
@@ -47,6 +86,11 @@ class RadioVecherBot(commands.Bot):
     async def _init_wavelink(self):
         """Инициализация Wavelink и подключение к Lavalink серверу"""
         try:
+            # Проверка USE_LAVALINK из .env
+            if not USE_LAVALINK:
+                print("Lavalink отключен в настройках .env (USE_LAVALINK=false)")
+                return
+                
             # Инициализация клиента Wavelink
             # Создание и подключение узла
             self.wavelink_node = wavelink.Node(
@@ -67,12 +111,21 @@ class RadioVecherBot(commands.Bot):
         print(f'Бот работает на {len(self.guilds)} серверах')
         print("Бот готов к работе!")
         
+        # Инициализация веб-сервера (только один раз)
+        if WEB_ENABLED and not self.web_server_initialized:
+            try:
+                initialize_web_server(self)
+                self.web_server_initialized = True
+                print(f"Веб-интерфейс запущен на http://localhost:{FLASK_PORT}")
+            except Exception as e:
+                print(f"Ошибка при инициализации веб-сервера: {e}")
+        
     async def update_presence(self, status=None):
         """Обновляет статус бота"""
         if status:
             activity_name = status
         else:
-            activity_name = RADIO_NAME
+            activity_name = self.current_radio['name']
             
         await self.change_presence(
             activity=discord.Activity(
@@ -80,6 +133,21 @@ class RadioVecherBot(commands.Bot):
                 name=activity_name
             )
         )
+        
+    def switch_radio(self, radio_key):
+        """Переключает текущую радиостанцию
+
+        Args:
+            radio_key: Ключ радиостанции в словаре available_radios
+
+        Returns:
+            dict: Информация о выбранной радиостанции или None, если не найдена
+        """
+        radio_key = radio_key.lower()
+        if radio_key in self.available_radios:
+            self.current_radio = self.available_radios[radio_key]
+            return self.current_radio
+        return None
         
     async def on_guild_join(self, guild):
         """Вызывается, когда бот присоединяется к новому серверу"""
@@ -93,6 +161,9 @@ class RadioVecherBot(commands.Bot):
                 break
                 
         if general_channel:
+            web_url = get_web_url()
+            queue_url = f"{web_url}/queue/{guild.id}" if web_url else None
+            
             embed = discord.Embed(
                 title="Спасибо за добавление Радио Вечер!",
                 description="Бот для проведения киновечеров с музыкой в голосовом канале.",
@@ -107,17 +178,31 @@ class RadioVecherBot(commands.Bot):
             
             embed.add_field(
                 name="Основные команды",
-                value=f"`/play` - добавить трек\n`/skip` - пропустить трек\n`/pause` - пауза\n`/resume` - продолжить\n`/radio` - вернуться к {RADIO_NAME}",
+                value=f"`/play` - добавить трек\n`/skip` - пропустить трек\n`/pause` - пауза\n`/resume` - продолжить\n`/radio` - вернуться к радио\n`/switch_radio` - сменить радиостанцию",
                 inline=False
             )
             
             embed.add_field(
-                name="Настройка",
-                value="Для настройки каналов отредактируйте файл `cogs/music_commands.py`.",
+                name="Умные плейлисты",
+                value="Используйте `/smart_playlist` для создания плейлиста на основе трека.",
                 inline=False
             )
             
+            if web_url:
+                embed.add_field(
+                    name="Веб-интерфейс",
+                    value=f"Используйте команду `/webpanel` для получения ссылки на веб-интерфейс или перейдите по адресу: [Панель управления]({queue_url})",
+                    inline=False
+                )
+            
+            embed.set_footer(text=f"Радио Вечер v2.0 • {datetime.datetime.now().year}")
+            
             await general_channel.send(embed=embed)
+            
+    @property
+    def web_url(self):
+        """Возвращает URL веб-интерфейса"""
+        return f"http://localhost:{FLASK_PORT}" if WEB_ENABLED else None
 
 # Запуск бота
 if __name__ == "__main__":

@@ -1,0 +1,587 @@
+:root {
+    --bs-primary: #5c6bc0;
+    --bs-primary-rgb: 92, 107, 192;
+    --bs-dark-subtle: rgba(26, 27, 30, 0.8);
+    --bs-light-emphasis: rgba(255, 255, 255, 0.7);
+    --primary-color: #5865f2;
+    --primary-color-dark: #4752c4;
+    --secondary-color: #2e3137;
+    --secondary-color-dark: #1a1d21;
+    --text-color: #ffffff;
+    --text-muted: #8e9297;
+    --success-color: #43b581;
+    --danger-color: #f04747;
+    --warning-color: #faa61a;
+    --info-color: #00b0f4;
+    --dark-bg: #121212;
+    --dark-card: #1e1e1e;
+    --dark-highlight: #252525;
+    --accent: #444;
+    --text: #e0e0e0;
+    --text-secondary: #a0a0a0;
+    --text-highlight: #ffffff;
+}
+
+body {
+    background-color: #121212;
+    color: var(--text-color);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Основные стили */
+.dark-theme {
+    background-color: var(--dark-bg);
+    color: var(--text);
+    font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
+}
+
+.content-area {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* Поле поиска */
+.search-input {
+    background-color: var(--dark-highlight);
+    border: none;
+    color: var(--text);
+    padding: 12px 20px;
+    border-radius: 4px;
+    width: 100%;
+    font-size: 16px;
+}
+
+.search-input:focus {
+    outline: none;
+    background-color: var(--dark-highlight);
+    color: var(--text-highlight);
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+}
+
+.search-input::placeholder {
+    color: var(--text-secondary);
+}
+
+/* Карточки заказов */
+.order-card {
+    background-color: var(--dark-card);
+    border: none;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.order-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
+
+.order-card .card-body {
+    padding: 16px;
+}
+
+.order-number {
+    font-size: 24px;
+    font-weight: bold;
+    color: var(--text-secondary);
+    width: 40px;
+    text-align: center;
+}
+
+.order-image {
+    width: 70px;
+    height: 70px;
+    margin-right: 16px;
+    overflow: hidden;
+    border-radius: 6px;
+}
+
+.order-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.order-info {
+    flex: 1;
+}
+
+.order-title {
+    font-size: 18px;
+    margin-bottom: 8px;
+    color: var(--text-highlight);
+}
+
+.order-meta {
+    display: flex;
+    gap: 16px;
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.order-customer {
+    position: relative;
+}
+
+.order-customer:after {
+    content: "•";
+    position: absolute;
+    right: -10px;
+    color: var(--text-secondary);
+}
+
+/* Тосты */
+.toast {
+    background-color: var(--dark-card);
+    color: var(--text);
+}
+
+.toast-header {
+    background-color: var(--dark-highlight);
+    color: var(--text-highlight);
+    border-bottom: 1px solid var(--accent);
+}
+
+.toast-success {
+    border-left: 4px solid #28a745;
+}
+
+.toast-error {
+    border-left: 4px solid #dc3545;
+}
+
+.toast-info {
+    border-left: 4px solid #17a2b8;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .order-number {
+        font-size: 18px;
+        width: 30px;
+    }
+    
+    .order-image {
+        width: 50px;
+        height: 50px;
+        margin-right: 12px;
+    }
+    
+    .order-title {
+        font-size: 16px;
+    }
+    
+    .order-meta {
+        font-size: 12px;
+    }
+}
+
+/* Карточки */
+.card {
+    background-color: var(--secondary-color);
+    border: none;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+}
+
+.card-header {
+    border-bottom: none;
+    padding: 15px 20px;
+    background-color: var(--primary-color);
+    color: var(--text-color);
+    font-weight: 600;
+}
+
+.card-body {
+    padding: 20px;
+}
+
+/* Ссылки и кнопки */
+a {
+    color: var(--primary-color);
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+a:hover {
+    color: var(--primary-color-dark);
+    text-decoration: none;
+}
+
+.btn {
+    border-radius: 4px;
+    font-weight: 500;
+    padding: 8px 16px;
+    transition: all 0.2s ease;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-color-dark);
+    border-color: var(--primary-color-dark);
+}
+
+.btn-danger {
+    background-color: var(--danger-color);
+    border-color: var(--danger-color);
+}
+
+.btn-info {
+    background-color: var(--info-color);
+    border-color: var(--info-color);
+}
+
+/* Серверы и треки */
+.server-icon {
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--primary-color);
+    border-radius: 50%;
+    color: white;
+}
+
+.list-group-item {
+    background-color: var(--secondary-color);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: var(--text-color);
+    transition: background-color 0.2s ease;
+}
+
+.list-group-item:hover {
+    background-color: var(--secondary-color-dark);
+}
+
+.list-group-item.bg-dark-subtle {
+    background-color: var(--secondary-color) !important;
+}
+
+.bg-dark-subtle {
+    background-color: var(--secondary-color) !important;
+}
+
+/* Таблица очереди */
+.table {
+    color: var(--text-color);
+}
+
+.table-dark {
+    background-color: var(--secondary-color-dark);
+}
+
+.table-dark th,
+.table-dark td {
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.table-dark.table-hover tbody tr:hover {
+    background-color: rgba(255, 255, 255, 0.075);
+}
+
+/* Плеер */
+.current-track-thumbnail img {
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    object-fit: cover;
+    width: 150px;
+    height: 150px;
+}
+
+.control-buttons .btn {
+    min-width: 120px;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .current-track-thumbnail img {
+        width: 120px;
+        height: 120px;
+    }
+    
+    .control-buttons .btn {
+        min-width: auto;
+    }
+}
+
+/* Индикаторы */
+.badge {
+    padding: 5px 10px;
+    font-weight: 500;
+    border-radius: 4px;
+}
+
+/* Анимации */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.fadeIn {
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+/* Темная тема для выпадающих меню */
+.dropdown-menu {
+    background-color: var(--secondary-color);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.dropdown-item {
+    color: var(--text-color);
+}
+
+.dropdown-item:hover {
+    background-color: var(--secondary-color-dark);
+    color: var(--text-color);
+}
+
+/* Серверы на главной странице */
+.server-card {
+    transition: all 0.2s ease;
+    cursor: pointer;
+    margin-bottom: 15px;
+}
+
+.server-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.3) !important;
+}
+
+.server-icon img {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.server-status {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 5px;
+}
+
+.status-connected {
+    background-color: #4caf50;
+}
+
+.status-disconnected {
+    background-color: #f44336;
+}
+
+/* Плеер */
+.track-thumbnail {
+    box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.2);
+    border-radius: 5px;
+}
+
+.track-title {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Очередь треков */
+.queue-item {
+    border-left: 3px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.queue-item:hover {
+    border-left-color: var(--bs-primary);
+}
+
+.track-number {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background-color: var(--bs-dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
+/* Добавление стилей для волн радио */
+.radio-wave {
+    display: flex;
+    align-items: flex-end;
+    height: 20px;
+}
+
+.radio-wave span {
+    display: inline-block;
+    width: 3px;
+    background-color: var(--bs-primary);
+    margin-right: 3px;
+    border-radius: 1px;
+    animation: radio-wave-anim 0.8s infinite ease-in-out alternate;
+}
+
+.radio-wave span:nth-child(1) {
+    height: 8px;
+    animation-delay: -0.4s;
+}
+
+.radio-wave span:nth-child(2) {
+    height: 15px;
+    animation-delay: -0.3s;
+}
+
+.radio-wave span:nth-child(3) {
+    height: 10px;
+    animation-delay: -0.2s;
+}
+
+.radio-wave span:nth-child(4) {
+    height: 18px;
+    animation-delay: -0.1s;
+}
+
+.radio-wave span:nth-child(5) {
+    height: 12px;
+    animation-delay: 0s;
+}
+
+@keyframes radio-wave-anim {
+    from {
+        transform: scaleY(0.6);
+    }
+    to {
+        transform: scaleY(1);
+    }
+}
+
+/* Стили для заказанных элементов */
+.order-item {
+    border-left: 3px solid transparent;
+    transition: all 0.2s ease;
+    padding: 0.75rem 1rem;
+}
+
+.order-item:hover {
+    border-left-color: var(--bs-primary);
+    background-color: rgba(92, 107, 192, 0.1);
+}
+
+.order-item .order-date {
+    color: var(--bs-light-emphasis);
+    font-size: 0.85rem;
+}
+
+.order-item .order-title {
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+}
+
+.order-item img {
+    width: 60px;
+    height: 60px;
+    border-radius: 5px;
+    object-fit: cover;
+}
+
+/* Иконка для идентификации пользователя */
+.user-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background-color: var(--bs-primary);
+    color: white;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    margin-right: 8px;
+}
+
+/* Стили для поля поиска */
+.search-box {
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    color: white;
+}
+
+.search-box:focus {
+    background-color: rgba(255, 255, 255, 0.15);
+    color: white;
+    border-color: var(--bs-primary);
+    box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25);
+}
+
+/* Радиостанции */
+.radio-card {
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-radius: 5px;
+    overflow: hidden;
+    background-color: rgba(255, 255, 255, 0.05);
+    margin-bottom: 10px;
+    border: 2px solid transparent;
+}
+
+.radio-card img {
+    width: 40px;
+    height: 40px;
+    border-radius: 5px;
+    object-fit: cover;
+}
+
+.radio-card:hover {
+    transform: translateY(-2px);
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.radio-card.active {
+    border-color: var(--bs-primary);
+    background-color: rgba(92, 107, 192, 0.1);
+}
+
+/* Анимации */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.fade-in {
+    animation: fadeIn 0.3s ease-in;
+}
+
+/* Стили для боковой панели */
+.sidebar {
+    position: -webkit-sticky;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+/* Медиа-запросы для адаптивности */
+@media (max-width: 767.98px) {
+    .sidebar {
+        height: auto;
+        position: relative;
+    }
+}
+
+@media (max-width: 991.98px) {
+    .track-title, .track-author {
+        white-space: normal;
+    }
+} 

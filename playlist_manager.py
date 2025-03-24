@@ -18,11 +18,11 @@ class PlaylistManager:
         self.voting_status: Dict[str, Dict[str, Any]] = {}
         self.lock = asyncio.Lock()
         
-        # Загрузка плейлистов при инициализации
-        self._load_playlists()
+        # Загружаем плейлисты из файла при инициализации
+        self.load_playlists()
     
-    def _load_playlists(self) -> None:
-        """Загрузка плейлистов из JSON-файла"""
+    def load_playlists(self):
+        """Загружает плейлисты из JSON-файла"""
         try:
             if os.path.exists(self.playlists_file):
                 with open(self.playlists_file, 'r', encoding='utf-8') as f:
@@ -31,21 +31,19 @@ class PlaylistManager:
                     self.voting_status = data.get('voting_status', {})
         except Exception as e:
             print(f"Ошибка при загрузке плейлистов: {e}")
-            # Создаем пустые словари в случае ошибки
+            # Создаем пустые структуры данных в случае ошибки
             self.playlists = {}
             self.voting_status = {}
     
-    async def _save_playlists(self) -> None:
-        """Сохранение плейлистов в JSON-файл"""
+    async def save_playlists(self):
+        """Сохраняет плейлисты в JSON-файл"""
         try:
-            data = {
-                'playlists': self.playlists,
-                'voting_status': self.voting_status
-            }
-            
             async with self.lock:
                 with open(self.playlists_file, 'w', encoding='utf-8') as f:
-                    json.dump(data, f, ensure_ascii=False, indent=4)
+                    json.dump({
+                        'playlists': self.playlists,
+                        'voting_status': self.voting_status
+                    }, f, ensure_ascii=False, indent=2)
         except Exception as e:
             print(f"Ошибка при сохранении плейлистов: {e}")
     
@@ -146,7 +144,7 @@ class PlaylistManager:
         self.playlists[guild_key].append(new_playlist)
         
         # Сохраняем изменения
-        await self._save_playlists()
+        await self.save_playlists()
         
         return True, f"Плейлист '{name}' успешно создан"
     
@@ -182,7 +180,7 @@ class PlaylistManager:
             del self.voting_status[voting_key]
         
         # Сохраняем изменения
-        await self._save_playlists()
+        await self.save_playlists()
         
         return True, f"Плейлист '{playlist_name}' успешно удален"
     
@@ -211,7 +209,7 @@ class PlaylistManager:
         playlist['tracks'].append(track)
         
         # Сохраняем изменения
-        await self._save_playlists()
+        await self.save_playlists()
         
         return True, f"Трек '{track['title']}' добавлен в плейлист '{playlist_name}'"
     
@@ -243,7 +241,7 @@ class PlaylistManager:
         del playlist['tracks'][index]
         
         # Сохраняем изменения
-        await self._save_playlists()
+        await self.save_playlists()
         
         return True, f"Трек '{track_title}' удален из плейлиста '{playlist_name}'"
     
@@ -287,7 +285,7 @@ class PlaylistManager:
         playlist["votes"]["down"] = []
         
         # Сохраняем изменения
-        await self._save_playlists()
+        await self.save_playlists()
         
         return True, f"Голосование за плейлист '{playlist_name}' начато"
     
@@ -350,7 +348,7 @@ class PlaylistManager:
             message += ". Плейлист был отклонен."
         
         # Сохраняем изменения
-        await self._save_playlists()
+        await self.save_playlists()
         
         return True, message
     
@@ -395,7 +393,7 @@ class PlaylistManager:
                         playlist["votes"]["approved"] = False
                 
                 # Асинхронно сохраняем изменения
-                asyncio.create_task(self._save_playlists())
+                asyncio.create_task(self.save_playlists())
         
         return True, self.voting_status[voting_key]
     
@@ -428,4 +426,4 @@ class PlaylistManager:
         
         # Сохраняем изменения, если были завершены голосования
         if changed:
-            await self._save_playlists() 
+            await self.save_playlists() 

@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 import asyncio
 import time
 import wavelink
+import datetime
 
 # Загрузка переменных окружения
 load_dotenv()
@@ -240,22 +241,31 @@ class MusicCommands(commands.Cog):
             await self.create_admin_panel()
     
     async def get_player(self, guild_id):
-        """Получение или создание экземпляра плеера для указанного сервера"""
-        if guild_id in self.players:
-            return self.players[guild_id]
-            
-        # Создание нового экземпляра плеера
-        if USE_LAVALINK and hasattr(self.bot, 'wavelink_node') and self.bot.wavelink_node:
-            # Используем Lavalink, если доступен
-            player = LavalinkPlayer(self.bot, guild_id, VOICE_CHANNEL_ID, TEXT_CHANNEL_ID)
-            print(f"Создан новый плеер с Lavalink для сервера {guild_id}")
+        """Получение или создание музыкального плеера для сервера
+
+        Args:
+            guild_id: ID сервера Discord
+
+        Returns:
+            MusicPlayer: Экземпляр музыкального плеера
+        """
+        from bot import USE_LAVALINK
+        
+        # Проверяем, существует ли плеер для этого сервера
+        if guild_id in self.bot.players:
+            return self.bot.players[guild_id]
+        
+        # Создаем новый плеер в зависимости от настроек
+        if USE_LAVALINK and self.bot.wavelink_node:
+            # Если включен Lavalink и подключение успешно установлено
+            print(f"Создан LavalinkPlayer для сервера {guild_id}")
+            self.bot.players[guild_id] = LavalinkPlayer(self.bot, guild_id)
         else:
-            # Используем стандартный плеер
-            player = MusicPlayer(self.bot, guild_id, VOICE_CHANNEL_ID, TEXT_CHANNEL_ID)
-            print(f"Создан новый плеер для сервера {guild_id}")
-            
-        self.players[guild_id] = player
-        return player
+            # Если Lavalink отключен или не удалось подключиться
+            print(f"Создан стандартный MusicPlayer для сервера {guild_id}")
+            self.bot.players[guild_id] = MusicPlayer(self.bot, guild_id)
+        
+        return self.bot.players[guild_id]
     
     @app_commands.command(name="start", description="Запуск музыкального плеера в голосовом канале")
     @app_commands.default_permissions(manage_guild=True)
@@ -265,8 +275,17 @@ class MusicCommands(commands.Cog):
         if not self.has_admin_role(interaction.user):
             await interaction.response.send_message("У вас недостаточно прав для использования этой команды. Требуется право 'Управление сервером' или роль администратора.", ephemeral=True)
             return
+        
+        # Проверяем, находится ли пользователь в голосовом канале
+        if not interaction.user.voice or not interaction.user.voice.channel:
+            await interaction.response.send_message("Вы должны находиться в голосовом канале для использования этой команды.", ephemeral=True)
+            return
             
         player = await self.get_player(interaction.guild_id)
+        
+        # Сохраняем ID голосового и текстового каналов
+        player.voice_channel_id = interaction.user.voice.channel.id
+        player.text_channel_id = interaction.channel_id
         
         await interaction.response.defer(ephemeral=True)
         success = await player.connect()
@@ -368,595 +387,130 @@ class MusicCommands(commands.Cog):
         else:
             await interaction.response.send_message("Музыкальный плеер не запущен.", ephemeral=True)
     
-    @app_commands.command(name="radio", description=f"Возврат к воспроизведению {RADIO_NAME}")
-    async def play_radio(self, interaction: discord.Interaction):
-        """Возврат к воспроизведению радио по умолчанию"""
-        if interaction.guild_id in self.players:
-            player = self.players[interaction.guild_id]
-            
-            await interaction.response.defer(ephemeral=True)
-            success = await player.play_default_radio()
-            
-            if success:
-                await interaction.followup.send(f"Воспроизведение {RADIO_NAME}.", ephemeral=True)
-                await self.schedule_update_admin_panel(interaction.guild_id, status="▶️ Воспроизведение радио")
-            else:
-                await interaction.followup.send("Не удалось воспроизвести радио.", ephemeral=True)
-        else:
-            await interaction.response.send_message("Музыкальный плеер не запущен. Используйте команду `/start` для запуска.", ephemeral=True)
-            
-    @app_commands.command(name="play", description="Добавление трека в очередь воспроизведения")
-    @app_commands.describe(query="Ссылка на трек или поисковый запрос")
-    async def play_track(self, interaction: discord.Interaction, query: str):
-        """Добавление трека в очередь воспроизведения"""
-        if interaction.guild_id not in self.players:
-            # Автоматический запуск плеера при использовании команды play
-            player = await self.get_player(interaction.guild_id)
-            await player.connect()
-        else:
-            player = self.players[interaction.guild_id]
+    @app_commands.command(name="radio", description="Включить радио")
+    async def radio_command(self, interaction: discord.Interaction):
+        """Переключение плеера в режим радио"""
+        # Получаем или создаем плеер
+        player = await self.get_player(interaction.guild_id)
         
-        await interaction.response.defer(ephemeral=True)
-        success, message = await player.add_to_queue(query)
-        
-        if success:
-            await interaction.followup.send(message, ephemeral=True)
-            await self.schedule_update_admin_panel(interaction.guild_id, status="▶️ Воспроизведение")
-        else:
-            await interaction.followup.send(message, ephemeral=True)
-    
-    @commands.Cog.listener()
-    async def on_voice_state_update(self, member, before, after):
-        """Обработка изменений состояния голосового канала"""
-        # Проверка, является ли участник ботом
-        if member.id == self.bot.user.id:
-            # Если бот был отключен от голосового канала
-            if before.channel and not after.channel:
-                guild_id = before.channel.guild.id
-                if guild_id in self.players:
-                    player = self.players[guild_id]
-                    # Попытка переподключения
-                    await player.disconnect()  # Сначала отключаемся полностью
-                    success = await player.connect()
-                    if success:
-                        await player.play_default_radio()
-                        print(f"Бот переподключился к голосовому каналу в гильдии {guild_id}")
-                        
-                        # Обновление админ-панели
-                        await self.schedule_update_admin_panel(guild_id, f"▶️ Активен - {RADIO_NAME}")
-                    else:
-                        print(f"Не удалось переподключиться к голосовому каналу в гильдии {guild_id}")
-                        
-                        # Обновление админ-панели
-                        await self.schedule_update_admin_panel(status="⚠️ Ошибка подключения")
-
-    @app_commands.command(name="playlist_create", description="Создать новый плейлист")
-    @app_commands.describe(name="Название плейлиста")
-    async def create_playlist(self, interaction: discord.Interaction, name: str):
-        """Создание нового плейлиста"""
-        await interaction.response.defer(ephemeral=True)
-        
-        success, message = await self.playlist_manager.create_playlist(
-            guild_id=interaction.guild_id,
-            name=name,
-            author_id=interaction.user.id
-        )
-        
-        # Создаем и отправляем эмбед с результатом
-        embed = discord.Embed(
-            title="Создание плейлиста",
-            description=message,
-            color=discord.Color.green() if success else discord.Color.red()
-        )
-        
-        if success:
-            embed.add_field(name="Дальнейшие действия", value="Используйте команду `/playlist_add` чтобы добавить треки в плейлист, а затем `/playlist_vote_start` для начала голосования.")
-            
-        await interaction.followup.send(embed=embed, ephemeral=True)
-    
-    @app_commands.command(name="playlist_list", description="Показать список плейлистов")
-    @app_commands.describe(show_all="Показать все плейлисты, включая неодобренные")
-    async def list_playlists(self, interaction: discord.Interaction, show_all: bool = False):
-        """Отображение списка плейлистов"""
-        await interaction.response.defer(ephemeral=True)
-        
-        if show_all and self.has_admin_role(interaction.user):
-            playlists = self.playlist_manager.get_all_playlists(interaction.guild_id)
-        else:
-            playlists = self.playlist_manager.get_approved_playlists(interaction.guild_id)
-        
-        if not playlists:
-            embed = discord.Embed(
-                title="Плейлисты",
-                description="На этом сервере ещё нет плейлистов" if show_all else "На этом сервере ещё нет одобренных плейлистов",
-                color=discord.Color.blue()
-            )
-            await interaction.followup.send(embed=embed, ephemeral=True)
+        if not player:
+            await interaction.response.send_message("Бот не подключен к голосовому каналу. Используйте команду `/start`.", ephemeral=True)
             return
         
-        # Создаем эмбед со списком плейлистов
-        embed = discord.Embed(
-            title="Плейлисты",
-            description=f"Доступные плейлисты на сервере ({len(playlists)})",
-            color=discord.Color.blue()
-        )
-        
-        for i, playlist in enumerate(playlists):
-            author = interaction.guild.get_member(int(playlist["author_id"]))
-            author_name = author.display_name if author else "Неизвестно"
-            track_count = len(playlist["tracks"])
-            status = "✅ Одобрен" if playlist["votes"]["approved"] else "❌ Не одобрен"
-            
-            value = f"Автор: {author_name}\nТреков: {track_count}\nСтатус: {status}"
-            embed.add_field(
-                name=f"{i+1}. {playlist['name']}",
-                value=value,
-                inline=False
-            )
-        
-        # Добавляем подсказку по использованию команд
-        embed.set_footer(text="Используйте /playlist_play <название> для воспроизведения плейлиста")
-        
-        await interaction.followup.send(embed=embed, ephemeral=True)
-    
-    @app_commands.command(name="playlist_info", description="Показать информацию о плейлисте")
-    @app_commands.describe(name="Название плейлиста")
-    async def playlist_info(self, interaction: discord.Interaction, name: str):
-        """Отображение информации о плейлисте"""
-        await interaction.response.defer(ephemeral=True)
-        
-        playlist = self.playlist_manager.get_playlist(interaction.guild_id, name)
-        
-        if not playlist:
-            embed = discord.Embed(
-                title="Ошибка",
-                description=f"Плейлист '{name}' не найден",
-                color=discord.Color.red()
-            )
-            await interaction.followup.send(embed=embed, ephemeral=True)
-            return
-        
-        # Получение информации о голосовании
-        success, voting = self.playlist_manager.get_voting_status(interaction.guild_id, name)
-        
-        # Создаем эмбед с информацией о плейлисте
-        embed = discord.Embed(
-            title=f"Плейлист: {playlist['name']}",
-            color=discord.Color.blue()
-        )
-        
-        # Добавляем информацию об авторе
-        author = interaction.guild.get_member(int(playlist["author_id"]))
-        author_name = author.display_name if author else "Неизвестно"
-        embed.add_field(name="Автор", value=author_name, inline=True)
-        
-        # Добавляем информацию о статусе одобрения
-        status = "✅ Одобрен" if playlist["votes"]["approved"] else "❌ Не одобрен"
-        embed.add_field(name="Статус", value=status, inline=True)
-        
-        # Добавляем информацию о голосовании, если оно идет
-        if success and "finished" in voting and not voting["finished"]:
-            embed.add_field(
-                name="Голосование",
-                value=f"Идет голосование\n👍 За: {voting['up_votes']}\n👎 Против: {voting['down_votes']}",
-                inline=False
-            )
-        
-        # Список треков
-        tracks = playlist["tracks"]
-        if tracks:
-            tracks_text = ""
-            for i, track in enumerate(tracks[:10]):  # Показываем первые 10 треков
-                tracks_text += f"{i+1}. {track['title']}\n"
-            
-            if len(tracks) > 10:
-                tracks_text += f"...и ещё {len(tracks) - 10} трек(ов)"
-                
-            embed.add_field(name=f"Треки ({len(tracks)})", value=tracks_text, inline=False)
-        else:
-            embed.add_field(name="Треки", value="В плейлисте нет треков", inline=False)
-        
-        await interaction.followup.send(embed=embed, ephemeral=True)
-    
-    @app_commands.command(name="playlist_add", description="Добавить трек в плейлист")
-    @app_commands.describe(
-        name="Название плейлиста",
-        url="URL трека (YouTube, Spotify и др.)"
-    )
-    async def add_to_playlist(self, interaction: discord.Interaction, name: str, url: str):
-        """Добавление трека в плейлист"""
-        await interaction.response.defer(ephemeral=True)
-        
-        # Проверяем существование плейлиста
-        playlist = self.playlist_manager.get_playlist(interaction.guild_id, name)
-        if not playlist:
-            embed = discord.Embed(
-                title="Ошибка",
-                description=f"Плейлист '{name}' не найден",
-                color=discord.Color.red()
-            )
-            await interaction.followup.send(embed=embed, ephemeral=True)
-            return
-        
-        # Проверяем, имеет ли пользователь право изменять плейлист
-        if str(interaction.user.id) != playlist["author_id"] and not self.has_admin_role(interaction.user):
-            embed = discord.Embed(
-                title="Доступ запрещен",
-                description="Вы не можете изменять чужие плейлисты",
-                color=discord.Color.red()
-            )
-            await interaction.followup.send(embed=embed, ephemeral=True)
-            return
-        
-        # Проверяем URL на валидность и получаем информацию о треке
-        try:
-            result = await self.wavelink.get_tracks(url)
-            if not result:
-                embed = discord.Embed(
-                    title="Ошибка",
-                    description="Не удалось найти трек по указанному URL",
-                    color=discord.Color.red()
-                )
-                await interaction.followup.send(embed=embed, ephemeral=True)
+        # Проверяем, находится ли пользователь в том же голосовом канале, что и бот
+        voice_client = interaction.guild.voice_client
+        if voice_client and voice_client.channel and interaction.user.voice and interaction.user.voice.channel:
+            if voice_client.channel != interaction.user.voice.channel:
+                await interaction.response.send_message(f"Вы должны быть в том же голосовом канале, что и бот ({voice_client.channel.mention}).", ephemeral=True)
                 return
-            
-            # Если результат - плейлист, берем первый трек
-            if isinstance(result, wavelink.Playlist):
-                track = result.tracks[0]
-            else:
-                track = result[0]
-            
-            # Добавляем трек в плейлист
-            track_info = {
-                "url": url,
-                "title": track.title,
-                "author": track.author
-            }
-            
-            success, message = await self.playlist_manager.add_track(
-                guild_id=interaction.guild_id,
-                playlist_name=name,
-                track=track_info
-            )
-            
-            # Создаем эмбед с результатом
-            embed = discord.Embed(
-                title="Добавление трека",
-                description=message,
-                color=discord.Color.green() if success else discord.Color.red()
-            )
-            
-            if success:
-                embed.add_field(
-                    name="Информация о треке", 
-                    value=f"**Название:** {track.title}\n**Автор:** {track.author}"
-                )
-                
-            await interaction.followup.send(embed=embed, ephemeral=True)
-            
-        except Exception as e:
-            embed = discord.Embed(
-                title="Ошибка",
-                description=f"Произошла ошибка при обработке URL: {str(e)}",
-                color=discord.Color.red()
-            )
-            await interaction.followup.send(embed=embed, ephemeral=True)
+        
+        await interaction.response.defer()
+        
+        # Переключаемся на радио
+        await player.play_radio()
+        
+        # Отправляем подтверждение
+        await interaction.followup.send(f"🎵 Переключено на радио: **{self.bot.current_radio['name']}**")
+        
+        # Обновляем админ-панель
+        await self.schedule_update_admin_panel(interaction.guild_id)
     
-    @app_commands.command(name="playlist_remove", description="Удалить трек из плейлиста")
-    @app_commands.describe(
-        name="Название плейлиста",
-        index="Номер трека в плейлисте (начиная с 1)"
-    )
-    async def remove_from_playlist(self, interaction: discord.Interaction, name: str, index: int):
-        """Удаление трека из плейлиста"""
-        await interaction.response.defer(ephemeral=True)
+    @app_commands.command(name="switch_radio", description="Переключить радиостанцию")
+    async def switch_radio_command(self, interaction: discord.Interaction, станция: str):
+        """Переключает текущую радиостанцию на выбранную"""
+        guild_id = interaction.guild_id
         
-        # Проверяем существование плейлиста
-        playlist = self.playlist_manager.get_playlist(interaction.guild_id, name)
-        if not playlist:
-            embed = discord.Embed(
-                title="Ошибка",
-                description=f"Плейлист '{name}' не найден",
-                color=discord.Color.red()
+        # Проверка, есть ли музыкальный плеер для этого сервера
+        if guild_id not in self.players:
+            await interaction.response.send_message(
+                "Сначала необходимо запустить бота с помощью команды `/start`", 
+                ephemeral=True
             )
-            await interaction.followup.send(embed=embed, ephemeral=True)
             return
         
-        # Проверяем, имеет ли пользователь право изменять плейлист
-        if str(interaction.user.id) != playlist["author_id"] and not self.has_admin_role(interaction.user):
-            embed = discord.Embed(
-                title="Доступ запрещен",
-                description="Вы не можете изменять чужие плейлисты",
-                color=discord.Color.red()
+        # Пытаемся переключить радиостанцию
+        radio_info = self.bot.switch_radio(станция)
+        
+        if not radio_info:
+            # Если радиостанция не найдена, показываем список доступных
+            available_radios = ", ".join([f"**{key}**" for key in self.bot.available_radios.keys()])
+            await interaction.response.send_message(
+                f"Радиостанция не найдена. Доступные станции: {available_radios}",
+                ephemeral=True
             )
-            await interaction.followup.send(embed=embed, ephemeral=True)
             return
+            
+        await interaction.response.defer()
         
-        # Проверяем валидность индекса
-        if index < 1 or index > len(playlist["tracks"]):
-            embed = discord.Embed(
-                title="Ошибка",
-                description=f"Неверный номер трека. Доступны треки с 1 по {len(playlist['tracks'])}",
-                color=discord.Color.red()
-            )
-            await interaction.followup.send(embed=embed, ephemeral=True)
-            return
+        player = self.players[guild_id]
         
-        # Получаем информацию о треке перед удалением
-        track_to_remove = playlist["tracks"][index-1]["title"]
-        
-        # Удаляем трек из плейлиста
-        success, message = await self.playlist_manager.remove_track(
-            guild_id=interaction.guild_id,
-            playlist_name=name,
-            index=index-1  # Внутри используем 0-индексацию
-        )
-        
-        # Создаем эмбед с результатом
-        embed = discord.Embed(
-            title="Удаление трека",
-            description=message,
-            color=discord.Color.green() if success else discord.Color.red()
+        # Играем выбранную радиостанцию
+        success = await player.play_radio(
+            radio_info['url'], 
+            radio_info['name'],
+            radio_info['thumbnail']
         )
         
         if success:
-            embed.add_field(name="Удаленный трек", value=track_to_remove)
-        
-        await interaction.followup.send(embed=embed, ephemeral=True)
-    
-    @app_commands.command(name="playlist_delete", description="Удалить плейлист")
-    @app_commands.describe(name="Название плейлиста")
-    async def delete_playlist(self, interaction: discord.Interaction, name: str):
-        """Удаление плейлиста"""
-        await interaction.response.defer(ephemeral=True)
-        
-        # Проверяем существование плейлиста
-        playlist = self.playlist_manager.get_playlist(interaction.guild_id, name)
-        if not playlist:
             embed = discord.Embed(
-                title="Ошибка",
-                description=f"Плейлист '{name}' не найден",
-                color=discord.Color.red()
-            )
-            await interaction.followup.send(embed=embed, ephemeral=True)
-            return
-        
-        # Проверяем, имеет ли пользователь право удалять плейлист
-        if str(interaction.user.id) != playlist["author_id"] and not self.has_admin_role(interaction.user):
-            embed = discord.Embed(
-                title="Доступ запрещен",
-                description="Вы не можете удалять чужие плейлисты",
-                color=discord.Color.red()
-            )
-            await interaction.followup.send(embed=embed, ephemeral=True)
-            return
-        
-        # Удаляем плейлист
-        success, message = await self.playlist_manager.delete_playlist(
-            guild_id=interaction.guild_id,
-            playlist_name=name
-        )
-        
-        # Создаем эмбед с результатом
-        embed = discord.Embed(
-            title="Удаление плейлиста",
-            description=message,
-            color=discord.Color.green() if success else discord.Color.red()
-        )
-        
-        await interaction.followup.send(embed=embed, ephemeral=True)
-    
-    @app_commands.command(name="playlist_vote_start", description="Начать голосование за плейлист")
-    @app_commands.describe(name="Название плейлиста")
-    async def start_playlist_voting(self, interaction: discord.Interaction, name: str):
-        """Начало голосования за плейлист"""
-        await interaction.response.defer(ephemeral=False)  # Видно всем участникам
-        
-        # Проверяем существование плейлиста
-        playlist = self.playlist_manager.get_playlist(interaction.guild_id, name)
-        if not playlist:
-            embed = discord.Embed(
-                title="Ошибка",
-                description=f"Плейлист '{name}' не найден",
-                color=discord.Color.red()
-            )
-            await interaction.followup.send(embed=embed, ephemeral=True)
-            return
-        
-        # Проверяем, что автор или админ начинает голосование
-        if str(interaction.user.id) != playlist["author_id"] and not self.has_admin_role(interaction.user):
-            embed = discord.Embed(
-                title="Доступ запрещен",
-                description="Только автор плейлиста или администратор может начать голосование",
-                color=discord.Color.red()
-            )
-            await interaction.followup.send(embed=embed, ephemeral=True)
-            return
-        
-        # Проверяем, что плейлист не пустой
-        if not playlist["tracks"]:
-            embed = discord.Embed(
-                title="Ошибка",
-                description="Нельзя начать голосование за пустой плейлист. Добавьте треки с помощью /playlist_add",
-                color=discord.Color.red()
-            )
-            await interaction.followup.send(embed=embed, ephemeral=True)
-            return
-        
-        # Проверяем, что плейлист еще не одобрен
-        if playlist["votes"]["approved"]:
-            embed = discord.Embed(
-                title="Информация",
-                description=f"Плейлист '{name}' уже одобрен",
+                title="Радиостанция изменена",
+                description=f"🎵 Переключаюсь на **{radio_info['name']}**",
                 color=discord.Color.blue()
             )
-            await interaction.followup.send(embed=embed, ephemeral=True)
-            return
-        
-        # Начинаем голосование
-        success, message = await self.playlist_manager.start_voting(
-            guild_id=interaction.guild_id,
-            playlist_name=name,
-            duration=86400  # 24 часа
-        )
-        
-        if not success:
-            embed = discord.Embed(
-                title="Ошибка",
-                description=message,
-                color=discord.Color.red()
-            )
-            await interaction.followup.send(embed=embed, ephemeral=True)
-            return
-        
-        # Создаем эмбед для голосования
-        embed = discord.Embed(
-            title=f"Голосование за плейлист: {name}",
-            description="Решите, должен ли этот плейлист быть добавлен в общую коллекцию",
-            color=discord.Color.gold()
-        )
-        
-        # Добавляем информацию об авторе
-        author = interaction.guild.get_member(int(playlist["author_id"]))
-        author_name = author.display_name if author else "Неизвестно"
-        embed.add_field(name="Автор", value=author_name, inline=True)
-        
-        # Добавляем информацию о количестве треков
-        tracks_count = len(playlist["tracks"])
-        embed.add_field(name="Количество треков", value=str(tracks_count), inline=True)
-        
-        # Добавляем список треков
-        tracks_text = ""
-        for i, track in enumerate(playlist["tracks"][:5]):  # Показываем первые 5 треков
-            tracks_text += f"{i+1}. {track['title']}\n"
-        
-        if tracks_count > 5:
-            tracks_text += f"...и ещё {tracks_count - 5} трек(ов)"
+            embed.set_thumbnail(url=radio_info['thumbnail'])
             
-        embed.add_field(name="Треки", value=tracks_text, inline=False)
+            await interaction.followup.send(embed=embed)
         
-        # Добавляем информацию о голосовании
+            # Обновление статуса бота
+            await self.bot.update_presence(f"{radio_info['name']}")
+            await self.schedule_update_admin_panel(guild_id, f"▶️ Играет {radio_info['name']}")
+        else:
+            await interaction.followup.send(
+                "Произошла ошибка при переключении радиостанции", 
+                ephemeral=True
+            )
+    
+    @app_commands.command(name="webpanel", description="Получить ссылку на веб-панель управления ботом")
+    async def webpanel(self, interaction: discord.Interaction):
+        """Отправляет ссылку на веб-панель управления ботом"""
+        # Получаем URL веб-панели из web/server.py
+        from web.server import get_web_url
+        
+        web_url = get_web_url()
+        
+        if not web_url:
+            await interaction.response.send_message("Веб-панель недоступна. Проверьте настройки бота.", ephemeral=True)
+            return
+        
+        # Создаем ссылку на страницу очереди для текущего сервера
+        queue_url = f"{web_url}/queue/{interaction.guild_id}"
+        
+        embed = discord.Embed(
+            title="Веб-панель Радио Вечер",
+            description="Используйте эти ссылки для управления ботом через веб-интерфейс:",
+            color=discord.Color.blue()
+        )
+        
         embed.add_field(
-            name="Голосование",
-            value="Голосование продлится 24 часа\nНажмите на кнопки ниже, чтобы проголосовать",
+            name="Главная панель",
+            value=f"[Открыть в браузере]({web_url})",
             inline=False
         )
         
-        # Создаем кнопки для голосования
-        view = PlaylistVotingView(
-            playlist_manager=self.playlist_manager,
-            guild_id=interaction.guild_id,
-            playlist_name=name
+        embed.add_field(
+            name="Управление этим сервером",
+            value=f"[Открыть в браузере]({queue_url})",
+            inline=False
         )
         
-        await interaction.followup.send(embed=embed, view=view)
+        embed.set_footer(text=f"Радио Вечер • {datetime.datetime.now().year}")
+        
+        await interaction.response.send_message(embed=embed)
 
-    @app_commands.command(name="playlist_play", description="Воспроизвести плейлист")
-    @app_commands.describe(name="Название плейлиста")
-    async def play_playlist(self, interaction: discord.Interaction, name: str):
-        """Воспроизведение плейлиста"""
-        await interaction.response.defer(ephemeral=False)  # Видно всем участникам
-        
-        # Проверяем существование плейлиста
-        playlist = self.playlist_manager.get_playlist(interaction.guild_id, name)
-        if not playlist:
-            embed = discord.Embed(
-                title="Ошибка",
-                description=f"Плейлист '{name}' не найден",
-                color=discord.Color.red()
-            )
-            await interaction.followup.send(embed=embed, ephemeral=True)
-            return
-        
-        # Проверяем, что плейлист одобрен
-        if not playlist["votes"]["approved"] and not self.has_admin_role(interaction.user):
-            embed = discord.Embed(
-                title="Доступ запрещен",
-                description="Этот плейлист ещё не одобрен. Только администраторы могут воспроизводить неодобренные плейлисты.",
-                color=discord.Color.red()
-            )
-            await interaction.followup.send(embed=embed, ephemeral=True)
-            return
-        
-        # Проверяем, что плейлист не пустой
-        if not playlist["tracks"]:
-            embed = discord.Embed(
-                title="Ошибка",
-                description="Этот плейлист пуст и не может быть воспроизведен",
-                color=discord.Color.red()
-            )
-            await interaction.followup.send(embed=embed, ephemeral=True)
-            return
-        
-        # Проверяем, что пользователь находится в голосовом канале
-        if not interaction.user.voice:
-            embed = discord.Embed(
-                title="Ошибка",
-                description="Вы должны находиться в голосовом канале, чтобы воспроизвести плейлист",
-                color=discord.Color.red()
-            )
-            await interaction.followup.send(embed=embed, ephemeral=True)
-            return
-        
-        # Получаем или создаем плеер
-        player = await self.get_player(interaction.guild.id)
-        if not player:
-            embed = discord.Embed(
-                title="Ошибка",
-                description="Не удалось подключиться к голосовому каналу",
-                color=discord.Color.red()
-            )
-            await interaction.followup.send(embed=embed, ephemeral=True)
-            return
-        
-        # Подключаемся к голосовому каналу
-        if not player.is_connected:
-            await player.connect(interaction.user.voice.channel.id)
-        
-        # Добавляем треки из плейлиста в очередь
-        added_tracks = 0
-        for track_info in playlist["tracks"]:
-            try:
-                result = await self.wavelink.get_tracks(track_info["url"])
-                if not result:
-                    continue
-                    
-                # Если результат - плейлист, берем первый трек
-                if isinstance(result, wavelink.Playlist):
-                    track = result.tracks[0]
-                else:
-                    track = result[0]
-                
-                # Добавляем трек в очередь плеера
-                await player.queue.put_wait(track)
-                added_tracks += 1
-                
-            except Exception:
-                # Если трек не удалось добавить, пропускаем его
-                continue
-        
-        # Если ни один трек не был добавлен, сообщаем об ошибке
-        if added_tracks == 0:
-            embed = discord.Embed(
-                title="Ошибка",
-                description="Не удалось добавить ни один трек из плейлиста в очередь",
-                color=discord.Color.red()
-            )
-            await interaction.followup.send(embed=embed, ephemeral=True)
-            return
-        
-        # Создаем эмбед с информацией о воспроизведении
-        embed = discord.Embed(
-            title=f"Воспроизведение плейлиста: {name}",
-            description=f"Добавлено {added_tracks} из {len(playlist['tracks'])} треков в очередь",
-            color=discord.Color.green()
-        )
-        
-        await interaction.followup.send(embed=embed)
-        
-        # Если плеер не воспроизводит музыку, начинаем воспроизведение
-        if not player.is_playing():
-            await player.play(await player.queue.get_wait())
+    @app_commands.command(name="play", description="Добавить трек в очередь")
+    async def play_command(self, interaction: discord.Interaction, запрос: str):
+        """Добавление трека в очередь воспроизведения"""
+        # ... existing code ...
 
 # Класс для кнопок голосования за плейлист
 class PlaylistVotingView(discord.ui.View):

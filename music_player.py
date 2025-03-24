@@ -42,11 +42,11 @@ FFMPEG_OPTIONS = {
 }
 
 class MusicPlayer:
-    def __init__(self, bot, guild_id, voice_channel_id, text_channel_id):
+    def __init__(self, bot, guild_id):
         self.bot = bot
         self.guild_id = guild_id
-        self.voice_channel_id = voice_channel_id
-        self.text_channel_id = text_channel_id
+        self.voice_channel_id = None
+        self.text_channel_id = None
         self.voice_client = None
         self.current_track = None
         self.queue = []
@@ -70,6 +70,11 @@ class MusicPlayer:
     async def connect(self):
         """Подключение к голосовому каналу"""
         try:
+            # Проверяем, указан ли ID голосового канала
+            if not self.voice_channel_id:
+                print(f"Ошибка: ID голосового канала не указан для сервера {self.guild_id}")
+                return False
+                
             channel = self.bot.get_channel(self.voice_channel_id)
             if not channel:
                 guild = self.bot.get_guild(self.guild_id)

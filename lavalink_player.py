@@ -26,11 +26,11 @@ LAVALINK_PASSWORD = os.getenv('LAVALINK_PASSWORD', 'youshallnotpass')
 LAVALINK_SECURE = os.getenv('LAVALINK_SECURE', 'false').lower() == 'true'
 
 class LavalinkPlayer:
-    def __init__(self, bot, guild_id, voice_channel_id, text_channel_id):
+    def __init__(self, bot, guild_id):
         self.bot = bot
         self.guild_id = guild_id
-        self.voice_channel_id = voice_channel_id
-        self.text_channel_id = text_channel_id
+        self.voice_channel_id = None
+        self.text_channel_id = None
         self.player = None
         self.current_track = None
         self.queue = []
@@ -53,6 +53,11 @@ class LavalinkPlayer:
     async def connect(self):
         """Подключение к голосовому каналу"""
         try:
+            # Проверяем, указан ли ID голосового канала
+            if not self.voice_channel_id:
+                print(f"Ошибка: ID голосового канала не указан для сервера {self.guild_id}")
+                return False
+                
             channel = self.bot.get_channel(self.voice_channel_id)
             if not channel:
                 guild = self.bot.get_guild(self.guild_id)
@@ -459,6 +464,134 @@ class LavalinkPlayer:
             
         except Exception as e:
             print(f"Ошибка при отправке информации о текущем треке: {e}")
+    
+    async def play_radio(self, radio_url, radio_name, radio_thumbnail=None):
+        """Воспроизведение радиостанции
+
+        Args:
+            radio_url: URL потока радиостанции
+            radio_name: Название радиостанции
+            radio_thumbnail: URL изображения радиостанции
+
+        Returns:
+            bool: Успешность операции
+        """
+        try:
+            # Останавливаем текущее воспроизведение
+            await self.stop()
+            
+            # Получаем трек для воспроизведения
+            search_result = await wavelink.Playable.search(radio_url)
+            
+            if not search_result:
+                print(f"Не удалось найти поток для {radio_name}")
+                return False
+                
+            track = search_result[0]
+            
+            # Добавляем метаданные радиостанции
+            track.title = f"Радиостанция: {radio_name}"
+            track.author = "Прямой эфир"
+            track.is_radio = True
+            track.radio_name = radio_name
+            track.radio_thumbnail = radio_thumbnail
+            
+            # Воспроизводим поток
+            await self.player.play(track)
+            
+            # Обновляем состояние и интерфейс
+            await self.update_player_state()
+            await self.update_player_message()
+            
+            return True
+            
+        except Exception as e:
+            print(f"Ошибка при воспроизведении радио {radio_name}: {e}")
+            return False
+            
+    async def search_similar_tracks(self, query, limit=10):
+        """Поиск треков, похожих на запрос
+
+        Args:
+            query: Поисковый запрос или URL трека
+            limit: Максимальное количество треков
+
+        Returns:
+            list: Список похожих треков
+        """
+        try:
+            # Сначала ищем по запросу
+            search_result = await wavelink.Playable.search(query)
+            
+            if not search_result:
+                return []
+                
+            # Берем первый трек из результатов поиска
+            base_track = search_result[0]
+            
+            # Если это URL трека, используем его для поиска рекомендаций
+            if "youtube.com" in query or "youtu.be" in query:
+                # Для YouTube можно использовать рекомендации API
+                recommendations = await wavelink.Playable.search(f"ytsearch:{base_track.title} {base_track.author} mix")
+            elif "spotify.com" in query:
+                # Для Spotify можно использовать поиск по артисту
+                recommendations = await wavelink.Playable.search(f"spsearch:{base_track.author} top tracks")
+            else:
+                # Для обычного поиска используем похожие треки
+                recommendations = await wavelink.Playable.search(f"{base_track.title} {base_track.author} similar")
+            
+            # Фильтруем результаты, чтобы избежать дубликатов
+            unique_tracks = []
+            seen_titles = set()
+            
+            # Добавляем базовый трек в начало
+            unique_tracks.append(base_track)
+            seen_titles.add(base_track.title.lower())
+            
+            # Добавляем уникальные рекомендации
+            for track in recommendations:
+                if track.title.lower() not in seen_titles and len(unique_tracks) < limit:
+                    unique_tracks.append(track)
+                    seen_titles.add(track.title.lower())
+            
+            return unique_tracks[:limit]
+            
+        except Exception as e:
+            print(f"Ошибка при поиске похожих треков: {e}")
+            return []
+            
+    async def search_track(self, query):
+        """Поиск треков по запросу
+
+        Args:
+            query: Поисковый запрос или URL
+
+        Returns:
+            list: Список найденных треков
+        """
+        try:
+            # Ищем треки по запросу
+            search_result = await wavelink.Playable.search(query)
+            return search_result
+        except Exception as e:
+            print(f"Ошибка при поиске трека: {e}")
+            return []
+            
+    def get_queue(self):
+        """Получение текущей очереди воспроизведения
+
+        Returns:
+            list: Список треков в очереди
+        """
+        return list(self.queue)
+        
+    def is_playing(self):
+        """Проверка, воспроизводится ли музыка
+
+        Returns:
+            bool: True, если музыка играет, иначе False
+        """
+        return self.player is not None and self.player.is_playing()
 
 class MusicControlView(discord.ui.View):
     def __init__(self, player):

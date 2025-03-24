@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Радио Вечер - Очередь заказов</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="dark-theme">
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-12">
+                <div class="content-area py-4">
+                    <!-- Шапка -->
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <div class="search-box flex-grow-1">
+                            <input type="text" class="form-control search-input" placeholder="Ищите по названию, заказчику или ID">
+                        </div>
+                    </div>
+
+                    <!-- Список заказов -->
+                    <div class="orders-list" id="ordersList">
+                        <!-- Заказы будут загружены через JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Тосты для уведомлений -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer"></div>
+
+    <!-- Шаблон заказа -->
+    <template id="orderTemplate">
+        <div class="card order-card mb-3">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="order-number"></div>
+                    <div class="order-image">
+                        <img src="/static/img/default-music.png" alt="Обложка">
+                    </div>
+                    <div class="order-info">
+                        <h5 class="card-title order-title"></h5>
+                        <div class="d-flex order-meta">
+                            <span class="order-customer"></span>
+                            <span class="order-date"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/js/main.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            loadOrders();
+        });
+
+        function loadOrders() {
+            fetch('/api/orders')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        displayOrders(data.orders);
+                    } else {
+                        showToast('Ошибка загрузки заказов', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка при загрузке заказов:', error);
+                    showToast('Не удалось загрузить заказы', 'error');
+                });
+        }
+
+        function displayOrders(orders) {
+            const ordersList = document.getElementById('ordersList');
+            const template = document.getElementById('orderTemplate');
+            ordersList.innerHTML = '';
+
+            orders.forEach((order, index) => {
+                const orderElement = template.content.cloneNode(true);
+                orderElement.querySelector('.order-number').textContent = index + 1;
+                orderElement.querySelector('.order-title').textContent = order.title;
+                orderElement.querySelector('.order-customer').textContent = order.customer;
+                orderElement.querySelector('.order-date').textContent = order.date;
+                
+                if (order.thumbnail) {
+                    orderElement.querySelector('.order-image img').src = order.thumbnail;
+                }
+                
+                ordersList.appendChild(orderElement);
+            });
+        }
+
+        // Поиск по заказам
+        document.querySelector('.search-input').addEventListener('input', function(e) {
+            const searchText = e.target.value.toLowerCase();
+            const orderCards = document.querySelectorAll('.order-card');
+            
+            orderCards.forEach(card => {
+                const title = card.querySelector('.order-title').textContent.toLowerCase();
+                const customer = card.querySelector('.order-customer').textContent.toLowerCase();
+                
+                if (title.includes(searchText) || customer.includes(searchText)) {
+                    card.style.display = '';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        });
+    </script>
+</body>
+</html> 
