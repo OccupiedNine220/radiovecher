@@ -4,8 +4,9 @@ from discord.ext import commands
 from dotenv import load_dotenv
 from music_player import MusicPlayer
 import wavelink
-from lavalink_player import LAVALINK_HOST, LAVALINK_PORT, LAVALINK_PASSWORD, LAVALINK_SECURE
+from lavalink_player import LAVALINK_HOST, LAVALINK_PORT, LAVALINK_PASSWORD, LAVALINK_SECURE, USE_INTERNAL_LAVALINK, download_and_start_lavalink
 import datetime
+import asyncio
 
 # Импорт веб-сервера
 try:
@@ -27,6 +28,9 @@ os.environ['FLASK_PORT'] = FLASK_PORT
 
 # Глобальная переменная для использования Lavalink
 USE_LAVALINK = os.getenv('USE_LAVALINK', 'true').lower() == 'true'
+
+# Процесс Lavalink сервера
+lavalink_process = None
 
 # Настройка интентов Discord
 intents = discord.Intents.default()
@@ -85,11 +89,26 @@ class RadioVecherBot(commands.Bot):
         
     async def _init_wavelink(self):
         """Инициализация Wavelink и подключение к Lavalink серверу"""
+        global lavalink_process
+        
         try:
             # Проверка USE_LAVALINK из .env
             if not USE_LAVALINK:
                 print("Lavalink отключен в настройках .env (USE_LAVALINK=false)")
                 return
+            
+            # Если включен внутренний Lavalink и мы на Windows
+            if USE_INTERNAL_LAVALINK and os.name == 'nt':
+                print("Запуск встроенного Lavalink сервера...")
+                lavalink_process = await download_and_start_lavalink()
+                
+                if not lavalink_process:
+                    print("Не удалось запустить встроенный Lavalink сервер.")
+                    print("Будет использован стандартный плеер без поддержки Lavalink.")
+                    return
+                
+                # Даем время на запуск серверу
+                await asyncio.sleep(5)
                 
             # Инициализация клиента Wavelink
             # Создание и подключение узла
@@ -204,7 +223,46 @@ class RadioVecherBot(commands.Bot):
         """Возвращает URL веб-интерфейса"""
         return f"http://localhost:{FLASK_PORT}" if WEB_ENABLED else None
 
+    async def close(self):
+        """Закрывает бота и останавливает Lavalink, если он был запущен"""
+        global lavalink_process
+        
+        # Останавливаем Lavalink сервер, если он запущен
+        if lavalink_process:
+            try:
+                print("Останавливаю Lavalink сервер...")
+                # Для Windows
+                if os.name == 'nt':
+                    import subprocess
+                    subprocess.run(['taskkill', '/F', '/T', '/PID', str(lavalink_process.pid)])
+                else:
+                    lavalink_process.terminate()
+                    lavalink_process.wait()
+                print("Lavalink сервер остановлен.")
+            except Exception as e:
+                print(f"Ошибка при остановке Lavalink сервера: {e}")
+        
+        # Вызываем оригинальный метод close
+        await super().close()
+
 # Запуск бота
 if __name__ == "__main__":
-    bot = RadioVecherBot()
-    bot.run(TOKEN) 
+    try:
+        bot = RadioVecherBot()
+        bot.run(TOKEN)
+    except KeyboardInterrupt:
+        print("Программа была остановлена пользователем")
+    except Exception as e:
+        print(f"Произошла ошибка: {e}")
+    finally:
+        # Делаем дополнительную очистку при завершении
+        if lavalink_process:
+            try:
+                # Для Windows
+                if os.name == 'nt':
+                    import subprocess
+                    subprocess.run(['taskkill', '/F', '/T', '/PID', str(lavalink_process.pid)])
+                else:
+                    lavalink_process.terminate()
+            except:
+                pass 

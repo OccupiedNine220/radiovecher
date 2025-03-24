@@ -3,114 +3,215 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Радио Вечер - Очередь заказов</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="/static/css/style.css">
+    <title>Радио Вечер - Музыкальный бот</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
-<body class="dark-theme">
-    <div class="container-fluid">
+<body class="animated-bg">
+    <div class="container my-4">
         <div class="row">
-            <div class="col-12">
-                <div class="content-area py-4">
-                    <!-- Шапка -->
-                    <div class="d-flex justify-content-between align-items-center mb-4">
-                        <div class="search-box flex-grow-1">
-                            <input type="text" class="form-control search-input" placeholder="Ищите по названию, заказчику или ID">
+            <div class="col-lg-12 mb-4">
+                <div class="card">
+                    <div class="card-body text-center py-5">
+                        <h1 class="display-4 mb-3">Радио Вечер</h1>
+                        <p class="lead mb-4">Музыкальный бот для проведения киновечеров с музыкой в голосовом канале Discord</p>
+                        <div class="d-flex justify-content-center align-items-center gap-3 mb-3">
+                            <div class="radio-wave">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </div>
                         </div>
                     </div>
-
-                    <!-- Список заказов -->
-                    <div class="orders-list" id="ordersList">
-                        <!-- Заказы будут загружены через JavaScript -->
+                </div>
+            </div>
+            
+            {% if guilds %}
+            <div class="col-lg-12 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-server me-2"></i> Ваши Discord-серверы
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            {% for guild in guilds %}
+                            <div class="col-md-4 mb-4">
+                                <div class="card h-100 server-card">
+                                    <div class="card-body">
+                                        <div class="d-flex align-items-center mb-3">
+                                            <div class="server-icon">
+                                                {% if guild.icon_url %}
+                                                <img src="{{ guild.icon_url }}" alt="{{ guild.name }}">
+                                                {% else %}
+                                                {{ guild.name[0] }}
+                                                {% endif %}
+                                            </div>
+                                            <div>
+                                                <h5 class="mb-0">{{ guild.name }}</h5>
+                                                <span class="server-status status-{% if guild.connected %}connected{% else %}disconnected{% endif %}">
+                                                    {% if guild.connected %}Активен{% else %}Не активен{% endif %}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div class="mt-3">
+                                            <a href="{{ url_for('queue_page', guild_id=guild.id) }}" class="btn btn-primary w-100">
+                                                <i class="fas fa-music me-2"></i> Управление музыкой
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <div class="col-lg-12 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-info-circle me-2"></i> Инструкция по использованию
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-4">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h5 class="mb-3"><i class="fas fa-play me-2"></i> Основные команды</h5>
+                                        <ul class="list-group list-group-flush">
+                                            <li class="list-group-item d-flex align-items-center">
+                                                <span class="badge bg-primary me-2">/start</span> 
+                                                <span>Запустить бота в голосовом канале</span>
+                                            </li>
+                                            <li class="list-group-item d-flex align-items-center">
+                                                <span class="badge bg-primary me-2">/play</span> 
+                                                <span>Добавить трек в очередь</span>
+                                            </li>
+                                            <li class="list-group-item d-flex align-items-center">
+                                                <span class="badge bg-primary me-2">/skip</span> 
+                                                <span>Пропустить текущий трек</span>
+                                            </li>
+                                            <li class="list-group-item d-flex align-items-center">
+                                                <span class="badge bg-primary me-2">/pause</span> 
+                                                <span>Поставить на паузу</span>
+                                            </li>
+                                            <li class="list-group-item d-flex align-items-center">
+                                                <span class="badge bg-primary me-2">/resume</span> 
+                                                <span>Продолжить воспроизведение</span>
+                                            </li>
+                                            <li class="list-group-item d-flex align-items-center">
+                                                <span class="badge bg-primary me-2">/radio</span> 
+                                                <span>Вернуться к радио</span>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-4">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h5 class="mb-3"><i class="fas fa-cogs me-2"></i> Дополнительные функции</h5>
+                                        <ul class="list-group list-group-flush">
+                                            <li class="list-group-item d-flex align-items-center">
+                                                <span class="badge bg-info me-2">/smart_playlist</span> 
+                                                <span>Создать плейлист на основе трека</span>
+                                            </li>
+                                            <li class="list-group-item d-flex align-items-center">
+                                                <span class="badge bg-info me-2">/switch_radio</span> 
+                                                <span>Сменить радиостанцию</span>
+                                            </li>
+                                            <li class="list-group-item d-flex align-items-center">
+                                                <span class="badge bg-info me-2">/search</span> 
+                                                <span>Поиск треков</span>
+                                            </li>
+                                            <li class="list-group-item d-flex align-items-center">
+                                                <span class="badge bg-info me-2">/webpanel</span> 
+                                                <span>Получить ссылку на веб-панель</span>
+                                            </li>
+                                            <li class="list-group-item d-flex align-items-center">
+                                                <span class="badge bg-info me-2">/queue</span> 
+                                                <span>Посмотреть очередь треков</span>
+                                            </li>
+                                            <li class="list-group-item d-flex align-items-center">
+                                                <span class="badge bg-info me-2">/volume</span> 
+                                                <span>Настроить громкость</span>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-12 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-broadcast-tower me-2"></i> Доступные радиостанции
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-4">
+                                <div class="radio-card active">
+                                    <img src="https://rusradio.ru/design/images/share.jpg" alt="Русское Радио">
+                                    <h5>Русское Радио</h5>
+                                    <p class="text-secondary mb-0">Все будет хорошо!</p>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-4">
+                                <div class="radio-card">
+                                    <img src="https://retrofm.ru/retrosite/upload/cache/b1-logo-retro-fm-240x240-crop-ffffff.webp" alt="Ретро FM">
+                                    <h5>Ретро FM</h5>
+                                    <p class="text-secondary mb-0">Лучшая музыка 70х, 80х, 90х</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-12">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-code me-2"></i> О проекте
+                    </div>
+                    <div class="card-body">
+                        <p>Радио Вечер — это Discord бот, созданный для проведения киновечеров с музыкой в голосовом канале. Бот позволяет слушать радио и музыку из различных источников: YouTube, Spotify, SoundCloud и др.</p>
+                        
+                        <div class="d-flex flex-wrap gap-2 mt-4">
+                            <a href="https://github.com/radiovecher" target="_blank" class="btn btn-primary">
+                                <i class="fab fa-github me-2"></i> GitHub
+                            </a>
+                            <a href="https://discord.com/api/oauth2/authorize?client_id=YOUR_CLIENT_ID&permissions=0&scope=bot%20applications.commands" target="_blank" class="btn btn-info">
+                                <i class="fab fa-discord me-2"></i> Добавить бота
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-
-    <!-- Тосты для уведомлений -->
-    <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer"></div>
-
-    <!-- Шаблон заказа -->
-    <template id="orderTemplate">
-        <div class="card order-card mb-3">
-            <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <div class="order-number"></div>
-                    <div class="order-image">
-                        <img src="/static/img/default-music.png" alt="Обложка">
-                    </div>
-                    <div class="order-info">
-                        <h5 class="card-title order-title"></h5>
-                        <div class="d-flex order-meta">
-                            <span class="order-customer"></span>
-                            <span class="order-date"></span>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    
+    <footer class="py-4 text-center text-secondary mt-4">
+        <div class="container">
+            <p>© 2023-2024 Радио Вечер. Все права защищены.</p>
         </div>
-    </template>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/static/js/main.js"></script>
+    </footer>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.1/socket.io.min.js"></script>
     <script>
+        // Инициализация подсказок
         document.addEventListener('DOMContentLoaded', function() {
-            loadOrders();
-        });
-
-        function loadOrders() {
-            fetch('/api/orders')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        displayOrders(data.orders);
-                    } else {
-                        showToast('Ошибка загрузки заказов', 'error');
-                    }
-                })
-                .catch(error => {
-                    console.error('Ошибка при загрузке заказов:', error);
-                    showToast('Не удалось загрузить заказы', 'error');
-                });
-        }
-
-        function displayOrders(orders) {
-            const ordersList = document.getElementById('ordersList');
-            const template = document.getElementById('orderTemplate');
-            ordersList.innerHTML = '';
-
-            orders.forEach((order, index) => {
-                const orderElement = template.content.cloneNode(true);
-                orderElement.querySelector('.order-number').textContent = index + 1;
-                orderElement.querySelector('.order-title').textContent = order.title;
-                orderElement.querySelector('.order-customer').textContent = order.customer;
-                orderElement.querySelector('.order-date').textContent = order.date;
-                
-                if (order.thumbnail) {
-                    orderElement.querySelector('.order-image img').src = order.thumbnail;
-                }
-                
-                ordersList.appendChild(orderElement);
-            });
-        }
-
-        // Поиск по заказам
-        document.querySelector('.search-input').addEventListener('input', function(e) {
-            const searchText = e.target.value.toLowerCase();
-            const orderCards = document.querySelectorAll('.order-card');
-            
-            orderCards.forEach(card => {
-                const title = card.querySelector('.order-title').textContent.toLowerCase();
-                const customer = card.querySelector('.order-customer').textContent.toLowerCase();
-                
-                if (title.includes(searchText) || customer.includes(searchText)) {
-                    card.style.display = '';
-                } else {
-                    card.style.display = 'none';
-                }
-            });
+            const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+            const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
         });
     </script>
 </body>
-</html> 
+</html>

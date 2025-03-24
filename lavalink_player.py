@@ -21,9 +21,14 @@ RADIO_THUMBNAIL = os.getenv('RADIO_THUMBNAIL', 'https://rusradio.ru/design/image
 
 # Настройки Lavalink
 LAVALINK_HOST = os.getenv('LAVALINK_HOST', 'localhost')
-LAVALINK_PORT = int(os.getenv('LAVALINK_PORT', '2333'))
+LAVALINK_PORT = int(os.getenv('LAVALINK_PORT', 2333))
 LAVALINK_PASSWORD = os.getenv('LAVALINK_PASSWORD', 'youshallnotpass')
 LAVALINK_SECURE = os.getenv('LAVALINK_SECURE', 'false').lower() == 'true'
+
+# Добавляем конфигурацию для использования встроенного сервера (для Windows совместимость)
+USE_INTERNAL_LAVALINK = os.getenv('USE_INTERNAL_LAVALINK', 'true').lower() == 'true'
+LAVALINK_JAR_PATH = os.getenv('LAVALINK_JAR_PATH', './Lavalink.jar')
+LAVALINK_DOWNLOAD_URL = os.getenv('LAVALINK_DOWNLOAD_URL', 'https://github.com/lavalink-devs/Lavalink/releases/download/3.7.8/Lavalink.jar')
 
 class LavalinkPlayer:
     def __init__(self, bot, guild_id):
@@ -73,10 +78,7 @@ class LavalinkPlayer:
             # Установка обработчика событий
             self.player.autoplay = wavelink.AutoPlayMode.disabled
             
-            # Добавляем обработчики событий
-            self.player.queue.set_player(self.player)
-            
-            # Регистрируем хук для отслеживания окончания треков
+            # Регистрируем обработчик окончания трека
             self.player.queue.callback = self._on_track_end
             
             self.reconnect_attempts = 0
@@ -110,9 +112,13 @@ class LavalinkPlayer:
             self.skip_votes.clear()
             
             # Воспроизводим поток через Lavalink
-            track = await wavelink.Playable.search(RADIO_STREAM_URL)
-            if isinstance(track, wavelink.Playlist):
-                track = track.tracks[0]
+            tracks = await wavelink.Playable.search(RADIO_STREAM_URL)
+            if isinstance(tracks, wavelink.Playlist):
+                track = tracks.tracks[0]
+            elif isinstance(tracks, list) and tracks:
+                track = tracks[0]
+            else:
+                track = tracks
             
             await self.player.play(track)
             self.is_playing = True
@@ -129,14 +135,18 @@ class LavalinkPlayer:
                 return await self.play_default_radio()
             return False
     
-    async def _on_track_end(self, event: wavelink.TrackEndEventPayload):
+    async def _on_track_end(self, event):
         """Обработчик окончания трека"""
-        if self.queue:
-            # Воспроизведение следующего трека из очереди
-            next_track = self.queue.pop(0)
-            await self.play_track(next_track)
-        else:
-            # Возврат к радио по умолчанию
+        try:
+            if self.queue:
+                # Воспроизведение следующего трека из очереди
+                next_track = self.queue.pop(0)
+                await self.play_track(next_track)
+            else:
+                # Возврат к радио по умолчанию
+                await self.play_default_radio()
+        except Exception as e:
+            print(f"Ошибка в обработчике окончания трека: {e}")
             await self.play_default_radio()
     
     async def _handle_playback_error(self):
@@ -176,11 +186,13 @@ class LavalinkPlayer:
             if 'wavelink_track' in track_info:
                 track = track_info['wavelink_track']
             else:
-                track = await wavelink.Playable.search(track_info['url'])
-                if isinstance(track, wavelink.Playlist):
-                    track = track.tracks[0]
-                elif isinstance(track, list) and track:
-                    track = track[0]
+                tracks = await wavelink.Playable.search(track_info['url'])
+                if isinstance(tracks, wavelink.Playlist):
+                    track = tracks.tracks[0]
+                elif isinstance(tracks, list) and tracks:
+                    track = tracks[0]
+                else:
+                    track = tracks
             
             # Обновляем информацию о треке
             if hasattr(track, 'uri'):
@@ -212,17 +224,17 @@ class LavalinkPlayer:
                 
                 # Поиск трека через Lavalink (Wavelink)
                 search_query = f"{track_info['title']} {track_info['artist']}"
-                wavelink_tracks = await wavelink.Playable.search(search_query)
+                tracks = await wavelink.Playable.search(search_query)
                 
-                if not wavelink_tracks:
+                if not tracks:
                     return False, "Не удалось найти трек."
                 
-                if isinstance(wavelink_tracks, wavelink.Playlist):
-                    wavelink_track = wavelink_tracks.tracks[0]
-                elif isinstance(wavelink_tracks, list) and wavelink_tracks:
-                    wavelink_track = wavelink_tracks[0]
+                if isinstance(tracks, wavelink.Playlist):
+                    wavelink_track = tracks.tracks[0]
+                elif isinstance(tracks, list) and tracks:
+                    wavelink_track = tracks[0]
                 else:
-                    wavelink_track = wavelink_tracks
+                    wavelink_track = tracks
                 
                 # Объединение информации
                 track_info.update({
@@ -241,19 +253,19 @@ class LavalinkPlayer:
             
             elif 'youtube.com' in query or 'youtu.be' in query or 'soundcloud.com' in query:
                 # Поиск через Lavalink
-                wavelink_tracks = await wavelink.Playable.search(query)
+                tracks = await wavelink.Playable.search(query)
                 
-                if not wavelink_tracks:
+                if not tracks:
                     return False, "Не удалось найти трек."
                 
-                if isinstance(wavelink_tracks, wavelink.Playlist):
+                if isinstance(tracks, wavelink.Playlist):
                     # Это плейлист, добавляем все треки
-                    for wavelink_track in wavelink_tracks.tracks:
+                    for track in tracks.tracks:
                         track_info = {
-                            'title': wavelink_track.title,
-                            'url': wavelink_track.uri if hasattr(wavelink_track, 'uri') else query,
-                            'thumbnail': getattr(wavelink_track, 'artwork', None) or 'https://i.ytimg.com/vi/default/hqdefault.jpg',
-                            'wavelink_track': wavelink_track,
+                            'title': track.title,
+                            'url': track.uri if hasattr(track, 'uri') else query,
+                            'thumbnail': getattr(track, 'artwork', None) or 'https://i.ytimg.com/vi/default/hqdefault.jpg',
+                            'wavelink_track': track,
                             'source': 'youtube' if 'youtube' in query else 'soundcloud'
                         }
                         self.queue.append(track_info)
@@ -262,18 +274,18 @@ class LavalinkPlayer:
                     if not self.is_playing and self.queue:
                         await self.play_track(self.queue.pop(0))
                     
-                    return True, f"Плейлист с {len(wavelink_tracks.tracks)} треками добавлен в очередь."
+                    return True, f"Плейлист с {len(tracks.tracks)} треками добавлен в очередь."
                 
-                elif isinstance(wavelink_tracks, list) and wavelink_tracks:
-                    wavelink_track = wavelink_tracks[0]
+                elif isinstance(tracks, list) and tracks:
+                    track = tracks[0]
                 else:
-                    wavelink_track = wavelink_tracks
+                    track = tracks
                 
                 track_info = {
-                    'title': wavelink_track.title,
-                    'url': wavelink_track.uri if hasattr(wavelink_track, 'uri') else query,
-                    'thumbnail': getattr(wavelink_track, 'artwork', None) or 'https://i.ytimg.com/vi/default/hqdefault.jpg',
-                    'wavelink_track': wavelink_track,
+                    'title': track.title,
+                    'url': track.uri if hasattr(track, 'uri') else query,
+                    'thumbnail': getattr(track, 'artwork', None) or 'https://i.ytimg.com/vi/default/hqdefault.jpg',
+                    'wavelink_track': track,
                     'source': 'youtube' if 'youtube' in query else 'soundcloud'
                 }
                 
@@ -287,21 +299,21 @@ class LavalinkPlayer:
             
             else:
                 # Обработка поискового запроса
-                wavelink_tracks = await wavelink.Playable.search(query)
+                tracks = await wavelink.Playable.search(query)
                 
-                if not wavelink_tracks:
+                if not tracks:
                     return False, "Не удалось найти трек."
                 
-                if isinstance(wavelink_tracks, list) and wavelink_tracks:
-                    wavelink_track = wavelink_tracks[0]
+                if isinstance(tracks, list) and tracks:
+                    track = tracks[0]
                 else:
-                    wavelink_track = wavelink_tracks
+                    track = tracks
                 
                 track_info = {
-                    'title': wavelink_track.title,
-                    'url': wavelink_track.uri if hasattr(wavelink_track, 'uri') else query,
-                    'thumbnail': getattr(wavelink_track, 'artwork', None) or 'https://i.ytimg.com/vi/default/hqdefault.jpg',
-                    'wavelink_track': wavelink_track,
+                    'title': track.title,
+                    'url': track.uri if hasattr(track, 'uri') else query,
+                    'thumbnail': getattr(track, 'artwork', None) or 'https://i.ytimg.com/vi/default/hqdefault.jpg',
+                    'wavelink_track': track,
                     'source': 'youtube'  # По умолчанию предполагаем, что это YouTube
                 }
                 
@@ -432,11 +444,11 @@ class LavalinkPlayer:
                 if self.current_track['source'] == 'stream':
                     embed.add_field(name="Источник", value="📻 Радиостанция", inline=True)
                 elif self.current_track['source'] == 'spotify':
-                    embed.add_field(name="Источник", value="<:spotify:1234567890> Spotify", inline=True)
+                    embed.add_field(name="Источник", value="Spotify", inline=True)
                 elif self.current_track['source'] == 'youtube':
-                    embed.add_field(name="Источник", value="<:youtube:1234567890> YouTube", inline=True)
+                    embed.add_field(name="Источник", value="YouTube", inline=True)
                 elif self.current_track['source'] == 'soundcloud':
-                    embed.add_field(name="Источник", value="<:soundcloud:1234567890> SoundCloud", inline=True)
+                    embed.add_field(name="Источник", value="SoundCloud", inline=True)
             
             if 'thumbnail' in self.current_track and self.current_track['thumbnail']:
                 embed.set_thumbnail(url=self.current_track['thumbnail'])
@@ -465,133 +477,23 @@ class LavalinkPlayer:
         except Exception as e:
             print(f"Ошибка при отправке информации о текущем треке: {e}")
     
-    async def play_radio(self, radio_url, radio_name, radio_thumbnail=None):
-        """Воспроизведение радиостанции
-
-        Args:
-            radio_url: URL потока радиостанции
-            radio_name: Название радиостанции
-            radio_thumbnail: URL изображения радиостанции
-
-        Returns:
-            bool: Успешность операции
-        """
-        try:
-            # Останавливаем текущее воспроизведение
-            await self.stop()
-            
-            # Получаем трек для воспроизведения
-            search_result = await wavelink.Playable.search(radio_url)
-            
-            if not search_result:
-                print(f"Не удалось найти поток для {radio_name}")
-                return False
-                
-            track = search_result[0]
-            
-            # Добавляем метаданные радиостанции
-            track.title = f"Радиостанция: {radio_name}"
-            track.author = "Прямой эфир"
-            track.is_radio = True
-            track.radio_name = radio_name
-            track.radio_thumbnail = radio_thumbnail
-            
-            # Воспроизводим поток
-            await self.player.play(track)
-            
-            # Обновляем состояние и интерфейс
-            await self.update_player_state()
-            await self.update_player_message()
-            
-            return True
-            
-        except Exception as e:
-            print(f"Ошибка при воспроизведении радио {radio_name}: {e}")
-            return False
-            
-    async def search_similar_tracks(self, query, limit=10):
-        """Поиск треков, похожих на запрос
-
-        Args:
-            query: Поисковый запрос или URL трека
-            limit: Максимальное количество треков
-
-        Returns:
-            list: Список похожих треков
-        """
-        try:
-            # Сначала ищем по запросу
-            search_result = await wavelink.Playable.search(query)
-            
-            if not search_result:
-                return []
-                
-            # Берем первый трек из результатов поиска
-            base_track = search_result[0]
-            
-            # Если это URL трека, используем его для поиска рекомендаций
-            if "youtube.com" in query or "youtu.be" in query:
-                # Для YouTube можно использовать рекомендации API
-                recommendations = await wavelink.Playable.search(f"ytsearch:{base_track.title} {base_track.author} mix")
-            elif "spotify.com" in query:
-                # Для Spotify можно использовать поиск по артисту
-                recommendations = await wavelink.Playable.search(f"spsearch:{base_track.author} top tracks")
-            else:
-                # Для обычного поиска используем похожие треки
-                recommendations = await wavelink.Playable.search(f"{base_track.title} {base_track.author} similar")
-            
-            # Фильтруем результаты, чтобы избежать дубликатов
-            unique_tracks = []
-            seen_titles = set()
-            
-            # Добавляем базовый трек в начало
-            unique_tracks.append(base_track)
-            seen_titles.add(base_track.title.lower())
-            
-            # Добавляем уникальные рекомендации
-            for track in recommendations:
-                if track.title.lower() not in seen_titles and len(unique_tracks) < limit:
-                    unique_tracks.append(track)
-                    seen_titles.add(track.title.lower())
-            
-            return unique_tracks[:limit]
-            
-        except Exception as e:
-            print(f"Ошибка при поиске похожих треков: {e}")
-            return []
-            
-    async def search_track(self, query):
-        """Поиск треков по запросу
-
-        Args:
-            query: Поисковый запрос или URL
-
-        Returns:
-            list: Список найденных треков
-        """
-        try:
-            # Ищем треки по запросу
-            search_result = await wavelink.Playable.search(query)
-            return search_result
-        except Exception as e:
-            print(f"Ошибка при поиске трека: {e}")
-            return []
-            
     def get_queue(self):
-        """Получение текущей очереди воспроизведения
-
-        Returns:
-            list: Список треков в очереди
-        """
+        """Получение текущей очереди воспроизведения"""
         return list(self.queue)
         
-    def is_playing(self):
-        """Проверка, воспроизводится ли музыка
-
-        Returns:
-            bool: True, если музыка играет, иначе False
-        """
-        return self.player is not None and self.player.is_playing()
+    def get_current_track(self):
+        """Получение информации о текущем треке"""
+        return self.current_track
+        
+    def get_status(self):
+        """Получение статуса плеера"""
+        return {
+            'is_playing': self.is_playing,
+            'is_paused': self.is_paused,
+            'current_track': self.current_track,
+            'queue': self.queue,
+            'connected': self.player is not None and self.player.is_connected() if self.player else False
+        }
 
 class MusicControlView(discord.ui.View):
     def __init__(self, player):
@@ -647,4 +549,89 @@ class AddTrackModal(discord.ui.Modal, title="Добавить трек"):
     
     async def on_submit(self, interaction: discord.Interaction):
         success, message = await self.player.add_to_queue(self.track_input.value)
-        await interaction.response.send_message(message, ephemeral=True) 
+        await interaction.response.send_message(message, ephemeral=True)
+
+# Функция для скачивания и запуска Lavalink сервера
+async def download_and_start_lavalink():
+    import subprocess
+    import os.path
+    import aiohttp
+    import asyncio
+    
+    # Проверяем, есть ли уже файл Lavalink.jar
+    if not os.path.isfile(LAVALINK_JAR_PATH):
+        print(f"Скачивание Lavalink сервера из {LAVALINK_DOWNLOAD_URL}...")
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(LAVALINK_DOWNLOAD_URL) as response:
+                    if response.status == 200:
+                        with open(LAVALINK_JAR_PATH, 'wb') as f:
+                            while True:
+                                chunk = await response.content.read(1024)
+                                if not chunk:
+                                    break
+                                f.write(chunk)
+                        print("Lavalink успешно загружен.")
+                    else:
+                        print(f"Ошибка при скачивании Lavalink: {response.status}")
+                        return False
+        except Exception as e:
+            print(f"Ошибка при скачивании Lavalink: {e}")
+            return False
+    
+    # Создаем application.yml если его нет
+    if not os.path.isfile("application.yml"):
+        with open("application.yml", "w") as f:
+            f.write(f"""server:
+  port: {LAVALINK_PORT}
+  address: {LAVALINK_HOST}
+lavalink:
+  server:
+    password: "{LAVALINK_PASSWORD}"
+    sources:
+      youtube: true
+      bandcamp: true
+      soundcloud: true
+      twitch: true
+      vimeo: true
+      http: true
+      local: false
+    bufferDurationMs: 400
+    youtubePlaylistLoadLimit: 6
+    playerUpdateInterval: 5
+    youtubeSearchEnabled: true
+    soundcloudSearchEnabled: true
+    gc-warnings: true
+
+logging:
+  file:
+    max-history: 30
+    max-size: 1GB
+  path: ./logs/
+
+  level:
+    root: INFO
+    lavalink: INFO
+""")
+    
+    # Запускаем Lavalink сервер
+    try:
+        if os.name == 'nt':  # Windows
+            process = subprocess.Popen(
+                ["java", "-jar", LAVALINK_JAR_PATH], 
+                creationflags=subprocess.CREATE_NEW_CONSOLE
+            )
+        else:  # Linux/MacOS
+            process = subprocess.Popen(
+                ["java", "-jar", LAVALINK_JAR_PATH],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE
+            )
+        
+        # Даем серверу время для запуска
+        await asyncio.sleep(5)
+        print(f"Lavalink сервер запущен на {LAVALINK_HOST}:{LAVALINK_PORT}")
+        return process
+    except Exception as e:
+        print(f"Ошибка при запуске Lavalink сервера: {e}")
+        return False 

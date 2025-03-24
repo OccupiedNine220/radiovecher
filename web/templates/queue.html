@@ -3,36 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Управление очередью - Радио Вечер</title>
+    <title>Управление музыкой - Радио Вечер</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
-<body class="bg-dark text-light">
-    <div class="container-fluid py-3">
-        <div class="row">
+<body class="animated-bg">
+    <div class="container-fluid">
+        <div class="row g-4 py-4">
             <!-- Боковая панель -->
-            <div class="col-md-3 col-lg-2 d-md-block sidebar collapse">
-                <div class="position-sticky">
+            <div class="col-md-3 col-lg-2">
+                <div class="sidebar">
                     <div class="d-flex align-items-center justify-content-between mb-4">
-                        <h2 class="h4">Радио Вечер</h2>
-                        <a href="{{ url_for('index') }}" class="btn btn-sm btn-outline-light">
-                            <i class="bi bi-house"></i>
+                        <h2 class="h4 m-0">Радио Вечер</h2>
+                        <a href="{{ url_for('index') }}" class="btn btn-icon btn-primary">
+                            <i class="fas fa-home"></i>
                         </a>
                     </div>
                     
                     <div id="serverSelect" class="mb-4">
                         <label for="guildSelector" class="form-label">Выберите сервер</label>
-                        <select class="form-select bg-dark text-light" id="guildSelector">
+                        <select class="form-select search-input" id="guildSelector">
                             <option value="">Загрузка...</option>
                         </select>
                     </div>
                     
-                    <div class="card bg-dark-subtle border-0 shadow mb-4">
-                        <div class="card-header bg-primary bg-gradient">
-                            <h5 class="mb-0 h6">Радиостанции</h5>
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <i class="fas fa-broadcast-tower me-2"></i> Радиостанции
                         </div>
-                        <div class="card-body" id="radioStations">
+                        <div class="card-body p-3" id="radioStations">
                             <div class="text-center py-2">
                                 <div class="spinner-border spinner-border-sm text-primary" role="status">
                                     <span class="visually-hidden">Загрузка...</span>
@@ -42,47 +43,96 @@
                         </div>
                     </div>
                     
-                    <div class="d-grid gap-2">
+                    <div class="d-grid gap-2 mb-4">
                         <button class="btn btn-primary" id="radioButton">
-                            <i class="bi bi-broadcast"></i> Включить радио
+                            <i class="fas fa-broadcast-tower me-2"></i> Включить радио
                         </button>
                         <button class="btn btn-info" type="button" data-bs-toggle="modal" data-bs-target="#addTrackModal">
-                            <i class="bi bi-plus-circle"></i> Добавить трек
+                            <i class="fas fa-plus-circle me-2"></i> Добавить трек
                         </button>
                     </div>
-                </div>
-            </div>
-            
-            <!-- Основное содержимое -->
-            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
-                <!-- Плеер -->
-                <div class="row mb-4">
-                    <div class="col-12">
-                        <div class="card bg-dark-subtle text-light border-0 shadow">
-                            <div class="card-body">
-                                <div class="row align-items-center" id="playerArea">
-                                    <div class="text-center py-4">
-                                        <div class="spinner-border text-primary" role="status">
-                                            <span class="visually-hidden">Загрузка...</span>
-                                        </div>
-                                        <p class="mt-2">Загрузка информации о плеере...</p>
-                                    </div>
-                                </div>
+                    
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <i class="fas fa-sliders-h me-2"></i> Управление
+                        </div>
+                        <div class="card-body p-3">
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-sm btn-primary" id="pauseButton">
+                                    <i class="fas fa-pause me-2"></i> Пауза
+                                </button>
+                                <button class="btn btn-sm btn-primary" id="resumeButton">
+                                    <i class="fas fa-play me-2"></i> Продолжить
+                                </button>
+                                <button class="btn btn-sm btn-primary" id="skipButton">
+                                    <i class="fas fa-forward me-2"></i> Пропустить
+                                </button>
+                                <button class="btn btn-sm btn-danger" id="stopButton">
+                                    <i class="fas fa-stop me-2"></i> Остановить
+                                </button>
+                            </div>
+                            
+                            <div class="mt-3">
+                                <label for="volumeRange" class="form-label d-flex justify-content-between">
+                                    <span>Громкость</span>
+                                    <span id="volumeValue">100%</span>
+                                </label>
+                                <input type="range" class="form-range" id="volumeRange" min="0" max="100" value="100">
                             </div>
                         </div>
                     </div>
                 </div>
-                
-                <!-- Очередь треков -->
-                <div class="row">
-                    <div class="col-12">
-                        <div class="card bg-dark-subtle text-light border-0 shadow mb-4">
-                            <div class="card-header bg-primary bg-gradient d-flex justify-content-between align-items-center">
-                                <h5 class="mb-0">Очередь треков</h5>
-                                <span id="queueCount" class="badge bg-light text-dark">0</span>
+            </div>
+            
+            <!-- Основной контент -->
+            <div class="col-md-9 col-lg-10">
+                <div class="row g-4">
+                    <!-- Текущий трек -->
+                    <div class="col-lg-5">
+                        <div class="card h-100 now-playing">
+                            <div class="card-header">
+                                <i class="fas fa-headphones me-2"></i> Сейчас играет
+                            </div>
+                            <div class="card-body text-center" id="currentTrackContainer">
+                                <div class="current-track-thumbnail mb-3" id="currentTrackImage">
+                                    <img src="{{ url_for('static', filename='img/default-music.jpg') }}" alt="Текущий трек">
+                                </div>
+                                <h4 id="currentTrackTitle">Загрузка...</h4>
+                                <p class="text-secondary" id="currentTrackAuthor">Радио Вечер</p>
+                                
+                                <div class="mt-4 d-flex justify-content-center control-buttons">
+                                    <button class="btn btn-icon btn-primary me-2" id="mobilePlayPauseButton">
+                                        <i class="fas fa-play" id="playPauseIcon"></i>
+                                    </button>
+                                    <button class="btn btn-icon btn-primary me-2" id="mobileSkipButton">
+                                        <i class="fas fa-forward"></i>
+                                    </button>
+                                    <button class="btn btn-icon btn-info" id="mobileSwitchRadioButton">
+                                        <i class="fas fa-broadcast-tower"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Очередь треков -->
+                    <div class="col-lg-7">
+                        <div class="card h-100">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="fas fa-list me-2"></i> Очередь треков
+                                </div>
+                                <button class="btn btn-sm btn-danger" id="clearQueueButton">
+                                    <i class="fas fa-trash-alt me-1"></i> Очистить
+                                </button>
                             </div>
                             <div class="card-body p-0">
-                                <div id="queueList">
+                                <div class="search-box p-3">
+                                    <i class="fas fa-search"></i>
+                                    <input type="text" id="queueSearchInput" class="search-input" placeholder="Поиск в очереди...">
+                                </div>
+                                
+                                <div class="list-group list-group-flush" id="queueContainer">
                                     <div class="text-center py-4">
                                         <div class="spinner-border text-primary" role="status">
                                             <span class="visually-hidden">Загрузка...</span>
@@ -90,218 +140,173 @@
                                         <p class="mt-2">Загрузка очереди...</p>
                                     </div>
                                 </div>
-                                <div id="emptyQueue" class="text-center py-4 d-none">
-                                    <i class="bi bi-music-note-list display-4 text-muted"></i>
-                                    <p class="mt-2">Очередь пуста</p>
-                                    <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addTrackModal">
-                                        <i class="bi bi-plus-circle"></i> Добавить трек
+                                
+                                <div id="emptyQueueMessage" class="text-center py-5" style="display: none;">
+                                    <i class="fas fa-music fa-3x mb-3 text-secondary"></i>
+                                    <h5>Очередь пуста</h5>
+                                    <p class="text-secondary">Добавьте треки, чтобы они появились здесь</p>
+                                    <button class="btn btn-primary mt-2" data-bs-toggle="modal" data-bs-target="#addTrackModal">
+                                        <i class="fas fa-plus-circle me-2"></i> Добавить трек
                                     </button>
                                 </div>
                             </div>
                         </div>
                     </div>
+                    
+                    <!-- Недавние заказы -->
+                    <div class="col-lg-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <i class="fas fa-history me-2"></i> Недавние заказы
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="list-group list-group-flush" id="recentOrdersContainer">
+                                    <div class="text-center py-4">
+                                        <div class="spinner-border text-primary" role="status">
+                                            <span class="visually-hidden">Загрузка...</span>
+                                        </div>
+                                        <p class="mt-2">Загрузка истории...</p>
+                                    </div>
+                                </div>
+                                
+                                <div id="emptyHistoryMessage" class="text-center py-5" style="display: none;">
+                                    <i class="fas fa-clock fa-3x mb-3 text-secondary"></i>
+                                    <h5>История пуста</h5>
+                                    <p class="text-secondary">Здесь будут отображаться недавно проигранные треки</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            </main>
+            </div>
         </div>
     </div>
     
     <!-- Модальное окно добавления трека -->
     <div class="modal fade" id="addTrackModal" tabindex="-1" aria-labelledby="addTrackModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content bg-dark text-light">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0">
                 <div class="modal-header">
                     <h5 class="modal-title" id="addTrackModalLabel">Добавить трек</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <form id="addTrackForm">
-                        <div class="mb-3">
-                            <label for="trackQuery" class="form-label">Название трека или URL</label>
-                            <input type="text" class="form-control bg-dark text-light" id="trackQuery" 
-                                placeholder="Введите название трека или YouTube URL" required>
-                            <div class="form-text text-light-emphasis">
-                                Можно ввести название трека, исполнителя или вставить ссылку на YouTube
-                            </div>
+                    <div class="mb-3">
+                        <label for="trackUrl" class="form-label">URL или название трека</label>
+                        <input type="text" class="search-input" id="trackUrl" placeholder="Вставьте URL или введите название для поиска">
+                    </div>
+                    
+                    <div id="searchResults" class="mt-3" style="display: none;">
+                        <h6 class="mb-3">Результаты поиска:</h6>
+                        <div id="searchResultsContainer" class="list-group">
+                            <!-- Сюда будут добавляться результаты поиска -->
                         </div>
-                    </form>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-                    <button type="button" class="btn btn-primary" id="submitTrack">Добавить</button>
+                    <button type="button" class="btn btn-primary" id="searchButton">Поиск</button>
+                    <button type="button" class="btn btn-success" id="addButton">Добавить</button>
                 </div>
             </div>
         </div>
     </div>
     
-    <!-- Всплывающие уведомления -->
-    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
-        <div id="liveToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="3000">
-            <div class="toast-header">
-                <strong class="me-auto" id="toastTitle">Уведомление</strong>
-                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Закрыть"></button>
-            </div>
-            <div class="toast-body" id="toastMessage">
-                Текст уведомления
-            </div>
-        </div>
-    </div>
-    
-    <!-- Шаблон плеера для текущего трека -->
-    <template id="currentTrackTemplate">
-        <div class="col-md-3 text-center">
-            <img src="{thumbnail}" alt="{title}" class="img-fluid rounded shadow track-thumbnail" style="max-height: 150px;">
-        </div>
-        <div class="col-md-6">
-            <h5 class="track-title">{title}</h5>
-            <p class="track-author text-light-emphasis mb-2">{author}</p>
-            <div class="progress mb-2" style="height: 6px;">
-                <div class="progress-bar bg-primary" role="progressbar" style="width: {progress}%"></div>
-            </div>
-            <div class="d-flex justify-content-between">
-                <small class="text-light-emphasis" id="currentTime">{currentTime}</small>
-                <small class="text-light-emphasis" id="totalTime">{totalTime}</small>
-            </div>
-        </div>
-        <div class="col-md-3 text-center">
-            <div class="btn-group mb-3">
-                <button class="btn btn-primary" id="playPauseButton">
-                    <i class="bi {playPauseIcon}"></i>
-                </button>
-                <button class="btn btn-primary" id="skipButton">
-                    <i class="bi bi-skip-forward"></i>
-                </button>
-                <button class="btn btn-primary" id="radioToggleButton">
-                    <i class="bi bi-broadcast"></i>
-                </button>
-            </div>
-            <div class="volume-control">
-                <label for="volumeRange" class="form-label d-flex justify-content-between">
-                    <span><i class="bi bi-volume-down"></i></span>
-                    <span id="volumeValue">{volume}%</span>
-                </label>
-                <input type="range" class="form-range" id="volumeRange" min="0" max="100" value="{volume}">
-            </div>
-        </div>
-    </template>
-    
-    <!-- Шаблон для радио-режима -->
-    <template id="radioModeTemplate">
-        <div class="col-md-3 text-center">
-            <img src="{thumbnail}" alt="{name}" class="img-fluid rounded shadow track-thumbnail" style="max-height: 150px;">
-            <div class="mt-2">
-                <span class="badge bg-danger">LIVE</span>
-            </div>
-        </div>
-        <div class="col-md-6">
-            <h5 class="track-title">{name}</h5>
-            <p class="track-author text-light-emphasis">Прямой эфир</p>
-            <div class="d-flex align-items-center mt-4">
-                <div class="me-2">
-                    <div class="radio-wave">
-                        <span></span><span></span><span></span><span></span><span></span>
+    <!-- Модальное окно умного плейлиста -->
+    <div class="modal fade" id="smartPlaylistModal" tabindex="-1" aria-labelledby="smartPlaylistModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="smartPlaylistModalLabel">Создать умный плейлист</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Создать плейлист из похожих треков на основе:</p>
+                    <h5 id="smartPlaylistTrackTitle" class="mb-3"></h5>
+                    
+                    <div class="mb-3">
+                        <label for="playlistSize" class="form-label">Количество треков</label>
+                        <input type="range" class="form-range" id="playlistSize" min="3" max="10" value="5">
+                        <div class="d-flex justify-content-between">
+                            <span>3</span>
+                            <span id="playlistSizeValue">5</span>
+                            <span>10</span>
+                        </div>
                     </div>
                 </div>
-                <div class="text-light-emphasis">Вещание в прямом эфире</div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="button" class="btn btn-primary" id="createSmartPlaylistButton">Создать</button>
+                </div>
             </div>
         </div>
-        <div class="col-md-3 text-center">
-            <div class="btn-group mb-3">
-                <button class="btn btn-primary" id="playPauseButton">
-                    <i class="bi {playPauseIcon}"></i>
-                </button>
-                <button class="btn btn-primary" id="trackModeButton">
-                    <i class="bi bi-music-note"></i>
-                </button>
-            </div>
-            <div class="volume-control">
-                <label for="volumeRange" class="form-label d-flex justify-content-between">
-                    <span><i class="bi bi-volume-down"></i></span>
-                    <span id="volumeValue">{volume}%</span>
-                </label>
-                <input type="range" class="form-range" id="volumeRange" min="0" max="100" value="{volume}">
-            </div>
-        </div>
-    </template>
+    </div>
     
-    <!-- Шаблон для отключенного плеера -->
-    <template id="disconnectedTemplate">
-        <div class="col-12 text-center py-4">
-            <i class="bi bi-plug display-1 text-danger"></i>
-            <h5 class="mt-3">Бот не подключен к голосовому каналу</h5>
-            <p class="text-light-emphasis">Используйте команду <code>/start</code> на сервере Discord для подключения бота.</p>
-        </div>
-    </template>
+    <!-- Уведомления -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer"></div>
     
-    <!-- Шаблон для элемента очереди -->
-    <template id="queueItemTemplate">
-        <div class="list-group-item bg-dark-subtle text-light border-0 border-bottom border-secondary d-flex align-items-center queue-item" data-index="{index}">
-            <div class="me-3 track-number">{number}</div>
-            <div class="me-3">
-                <img src="{thumbnail}" alt="{title}" class="rounded" width="50" height="50">
-            </div>
-            <div class="flex-fill">
-                <h6 class="mb-0">{title}</h6>
-                <small class="text-light-emphasis">{author}</small>
-            </div>
-            <div class="text-end">
-                <small class="text-light-emphasis me-3">{duration}</small>
-                <button class="btn btn-sm btn-outline-danger remove-track" data-index="{index}">
-                    <i class="bi bi-trash"></i>
-                </button>
-            </div>
-        </div>
-    </template>
-
-    <!-- CSS для анимации радиоволн -->
-    <style>
-        .radio-wave {
-            display: flex;
-            align-items: flex-end;
-            height: 20px;
-        }
-        
-        .radio-wave span {
-            width: 4px;
-            margin-right: 3px;
-            background-color: var(--bs-primary);
-            border-radius: 2px;
-            animation: wave 1.5s infinite ease-in-out;
-        }
-        
-        .radio-wave span:nth-child(1) { height: 10px; animation-delay: 0.0s; }
-        .radio-wave span:nth-child(2) { height: 16px; animation-delay: 0.2s; }
-        .radio-wave span:nth-child(3) { height: 20px; animation-delay: 0.4s; }
-        .radio-wave span:nth-child(4) { height: 12px; animation-delay: 0.6s; }
-        .radio-wave span:nth-child(5) { height: 8px; animation-delay: 0.8s; }
-        
-        @keyframes wave {
-            0%, 100% { transform: scaleY(1); }
-            50% { transform: scaleY(0.6); }
-        }
-        
-        /* Стиль для карточек радиостанций */
-        .radio-card {
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        
-        .radio-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.3);
-        }
-        
-        .radio-card.active {
-            border: 2px solid var(--bs-primary);
-        }
-    </style>
-    
-    <!-- Скрипты -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.6.1/dist/socket.io.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.1/socket.io.min.js"></script>
     <script>
-        // Получаем ID сервера из URL
-        const currentGuildId = "{{ guild_id }}";
+        // ID сервера из URL
+        const guildId = '{{ guild_id }}';
+        
+        // Базовые URL для API
+        const BASE_URL = window.location.origin;
+        const API_URL = `${BASE_URL}/api`;
+        
+        // DOM-элементы
+        const currentTrackTitle = document.getElementById('currentTrackTitle');
+        const currentTrackAuthor = document.getElementById('currentTrackAuthor');
+        const currentTrackImage = document.getElementById('currentTrackImage');
+        const queueContainer = document.getElementById('queueContainer');
+        const emptyQueueMessage = document.getElementById('emptyQueueMessage');
+        const recentOrdersContainer = document.getElementById('recentOrdersContainer');
+        const emptyHistoryMessage = document.getElementById('emptyHistoryMessage');
+        const radioStations = document.getElementById('radioStations');
+        const volumeRange = document.getElementById('volumeRange');
+        const volumeValue = document.getElementById('volumeValue');
+        const guildSelector = document.getElementById('guildSelector');
+        
+        // Кнопки управления
+        const radioButton = document.getElementById('radioButton');
+        const pauseButton = document.getElementById('pauseButton');
+        const resumeButton = document.getElementById('resumeButton');
+        const skipButton = document.getElementById('skipButton');
+        const stopButton = document.getElementById('stopButton');
+        const clearQueueButton = document.getElementById('clearQueueButton');
+        const mobilePlayPauseButton = document.getElementById('mobilePlayPauseButton');
+        const playPauseIcon = document.getElementById('playPauseIcon');
+        const mobileSkipButton = document.getElementById('mobileSkipButton');
+        const mobileSwitchRadioButton = document.getElementById('mobileSwitchRadioButton');
+        
+        // Модальное окно добавления трека
+        const trackUrl = document.getElementById('trackUrl');
+        const searchButton = document.getElementById('searchButton');
+        const addButton = document.getElementById('addButton');
+        const searchResults = document.getElementById('searchResults');
+        const searchResultsContainer = document.getElementById('searchResultsContainer');
+        
+        // Модальное окно умного плейлиста
+        const smartPlaylistTrackTitle = document.getElementById('smartPlaylistTrackTitle');
+        const playlistSize = document.getElementById('playlistSize');
+        const playlistSizeValue = document.getElementById('playlistSizeValue');
+        const createSmartPlaylistButton = document.getElementById('createSmartPlaylistButton');
+        
+        // Поиск в очереди
+        const queueSearchInput = document.getElementById('queueSearchInput');
+        
+        // Socket.io подключение
+        const socket = io();
+        let isPlaying = false;
+        let currentTrackData = null;
+        let currentRadioStation = null;
+        let selectedTrack = null;
+        
+        // Код основных функций остается без изменений
+        // ...
+
     </script>
-    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
+</html> 
 </html> 

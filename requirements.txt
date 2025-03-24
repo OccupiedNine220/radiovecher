@@ -4,8 +4,12 @@ yt-dlp==2023.11.16
 spotipy==2.23.0
 python-dotenv==1.0.0
 ffmpeg-python==0.2.0
-wavelink==3.0.0
+wavelink==3.2.0
 youtube_dl==2021.12.17
-aiohttp==3.8.5
+aiohttp==3.9.3
 Flask==2.3.3
-Flask-SocketIO==5.3.6 
+Flask-SocketIO==5.3.6
+yarl==1.9.4
+wheel==0.42.0
+setuptools>=65.5.1
+eventlet==0.33.3 
