@@ -48,7 +48,11 @@ intents.guilds = True
 intents.members = True
 
 # 🤖 СОЗДАНИЕ ЭКЗЕМПЛЯРА БОТА - ОСНОВА ВСЕГО ПРОЕКТА!!! 🤖
-bot = commands.Bot(command_prefix=os.getenv('COMMAND_PREFIX', '/'), intents=intents)
+bot = commands.Bot(
+    command_prefix=os.getenv('COMMAND_PREFIX', '/'),
+    intents=intents,
+    application_id=os.getenv('APPLICATION_ID')  # Добавляем application_id
+)
 
 # 🎵 СЛОВАРЬ ДЛЯ ХРАНЕНИЯ МУЗЫКАЛЬНЫХ ПЛЕЕРОВ - КАЖДОМУ СЕРВЕРУ СВОЙ!!! 🎵
 bot.players = {}
@@ -156,6 +160,8 @@ async def main():
 if __name__ == "__main__":
     try:
         # 🔄 ЗАПУСК В АСИНХРОННОМ РЕЖИМЕ - СОВРЕМЕННЫЕ ТЕХНОЛОГИИ!!! 🔄
+        if sys.platform == 'win32':
+            asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
         asyncio.run(main())
     except KeyboardInterrupt:
         logger.info("⛔ БОТ ОСТАНОВЛЕН ВРУЧНУЮ!!! ДО НОВЫХ ВСТРЕЧ!!! ⛔")
