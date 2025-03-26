@@ -55,7 +55,14 @@ class MusicCommands(commands.Cog):
         self.panel_update_lock = asyncio.Lock()  # Блокировка для предотвращения одновременных обновлений
         self.pending_update = False  # Флаг ожидающего обновления
         self.last_status = "⏸️ Остановлен"  # Последний известный статус
-        self.playlist_manager = PlaylistManager()  # Менеджер плейлистов
+        
+        # Импортируем PlaylistManager только если он существует
+        try:
+            from playlist_manager import PlaylistManager
+            self.playlist_manager = PlaylistManager()  # Менеджер плейлистов
+        except ImportError:
+            self.playlist_manager = None
+            print("⚠️ PlaylistManager не найден, функциональность плейлистов недоступна!")
         
         # Ссылка для приглашения бота с нужными разрешениями
         self.invite_link = discord.utils.oauth_url(
@@ -241,31 +248,28 @@ class MusicCommands(commands.Cog):
             await self.create_admin_panel()
     
     async def get_player(self, guild_id):
-        """Получение или создание музыкального плеера для сервера
-
-        Args:
-            guild_id: ID сервера Discord
-
-        Returns:
-            MusicPlayer: Экземпляр музыкального плеера
-        """
-        from bot import USE_LAVALINK
-        
-        # Проверяем, существует ли плеер для этого сервера
+        """🎮 ПОЛУЧЕНИЕ ИЛИ СОЗДАНИЕ ПЛЕЕРА ДЛЯ СЕРВЕРА - УМНЫЙ ВЫБОР!!! 🎮"""
+        guild = self.bot.get_guild(guild_id)
+        if not guild:
+            print(f"⚠️ Гильдия с ID {guild_id} не найдена!!! ⚠️")
+            return None
+            
+        # Если плеер уже существует, возвращаем его
         if guild_id in self.bot.players:
             return self.bot.players[guild_id]
         
-        # Создаем новый плеер в зависимости от настроек
-        if USE_LAVALINK and self.bot.wavelink_node:
-            # Если включен Lavalink и подключение успешно установлено
-            print(f"Создан LavalinkPlayer для сервера {guild_id}")
-            self.bot.players[guild_id] = LavalinkPlayer(self.bot, guild_id)
-        else:
-            # Если Lavalink отключен или не удалось подключиться
-            print(f"Создан стандартный MusicPlayer для сервера {guild_id}")
-            self.bot.players[guild_id] = MusicPlayer(self.bot, guild_id)
-        
-        return self.bot.players[guild_id]
+        # Иначе создаем новый плеер через функцию бота
+        try:
+            player = await self.bot.get_player(guild)
+            
+            # Настройка каналов для плеера
+            player.voice_channel_id = VOICE_CHANNEL_ID
+            player.text_channel_id = TEXT_CHANNEL_ID
+            
+            return player
+        except Exception as e:
+            print(f"❌ ОШИБКА ПРИ СОЗДАНИИ ПЛЕЕРА: {e}!!! ПРОВЕРЬТЕ НАСТРОЙКИ!!! ❌")
+            return None
     
     @app_commands.command(name="start", description="Запуск музыкального плеера в голосовом канале")
     @app_commands.default_permissions(manage_guild=True)

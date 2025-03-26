@@ -6,8 +6,6 @@ import discord
 from discord.ext import commands
 from dotenv import load_dotenv
 from music_player import MusicPlayer
-from lavalink_player import LavalinkPlayer
-from config import radios
 
 # 🌐 ИМПОРТ ВЕБ-СЕРВЕРА - БЕЗ НЕГО НИЧЕГО НЕ РАБОТАЕТ!!! 🌐
 try:
@@ -46,6 +44,28 @@ USE_LAVALINK = os.getenv('USE_LAVALINK', 'false').lower() == 'true'
 DEFAULT_VOLUME = int(os.getenv('DEFAULT_VOLUME', '50'))
 DEFAULT_RADIO = os.getenv('DEFAULT_RADIO', 'relax')
 
+# 🎵 ИМПОРТ КОНФИГУРАЦИИ РАДИОСТАНЦИЙ!!! 🎵
+try:
+    from config import radios
+except ImportError:
+    logger.error("❌ ОШИБКА: ФАЙЛ КОНФИГУРАЦИИ РАДИОСТАНЦИЙ НЕ НАЙДЕН!!! ❌")
+    radios = {}
+    sys.exit(1)
+
+# 🎛️ УСЛОВНЫЙ ИМПОРТ LAVALINK ПЛЕЕРА - ТОЛЬКО ЕСЛИ НУЖЕН!!! 🎛️
+if USE_LAVALINK:
+    try:
+        from lavalink_player import LavalinkPlayer, download_and_start_lavalink
+        LAVALINK_AVAILABLE = True
+        logger.info("✅ LAVALINK ИМПОРТИРОВАН УСПЕШНО!!! БУДЕТ ИСПОЛЬЗОВАН ДЛЯ ВОСПРОИЗВЕДЕНИЯ!!! ✅")
+    except ImportError as e:
+        logger.error(f"❌ ОШИБКА ИМПОРТА LAVALINK: {e}!!! БУДЕТ ИСПОЛЬЗОВАН ОБЫЧНЫЙ ПЛЕЕР!!! ❌")
+        USE_LAVALINK = False
+        LAVALINK_AVAILABLE = False
+else:
+    LAVALINK_AVAILABLE = False
+    logger.info("ℹ️ LAVALINK ОТКЛЮЧЕН В НАСТРОЙКАХ!!! БУДЕТ ИСПОЛЬЗОВАН ОБЫЧНЫЙ ПЛЕЕР!!! ℹ️")
+
 # 🧠 НАСТРОЙКА ИНТЕНТОВ БОТА - ВСЕ ДОЛЖНЫ БЫТЬ ВКЛЮЧЕНЫ!!! 🧠
 intents = discord.Intents.default()
 intents.message_content = True
@@ -66,6 +86,11 @@ bot.players = {}
 # 📻 НАСТРОЙКА ДОСТУПНЫХ РАДИОСТАНЦИЙ - ТОЛЬКО ЛУЧШИЕ СТАНЦИИ!!! 📻
 bot.available_radios = radios
 bot.current_radio = bot.available_radios.get(DEFAULT_RADIO, list(bot.available_radios.values())[0])
+
+# 🚀 СОХРАНЯЕМ СОСТОЯНИЕ LAVALINK ДЛЯ ИСПОЛЬЗОВАНИЯ В ДРУГИХ МОДУЛЯХ!!! 🚀
+bot.use_lavalink = USE_LAVALINK
+bot.lavalink_available = LAVALINK_AVAILABLE
+bot.wavelink_node = None  # Будет установлен если Lavalink запустится успешно
 
 # 🔄 ПЕРЕКЛЮЧЕНИЕ НА ДРУГУЮ РАДИОСТАНЦИЮ - МГНОВЕННАЯ СМЕНА НАСТРОЕНИЯ!!! 🔄
 def switch_radio(radio_key):
@@ -141,12 +166,12 @@ async def get_player(guild):
         return bot.players[guild_id]
     
     # 🆕 ИНАЧЕ СОЗДАЕМ НОВЫЙ ПЛЕЕР - САМЫЙ ЛУЧШИЙ В МИРЕ!!! 🆕
-    if USE_LAVALINK:
+    if bot.use_lavalink and bot.lavalink_available and bot.wavelink_node and bot.wavelink_node.is_connected:
         logger.info(f'🎵 СОЗДАНИЕ LavalinkPlayer ДЛЯ СЕРВЕРА {guild.name} (id: {guild_id})!!! ИДЕАЛЬНОЕ КАЧЕСТВО ЗВУКА!!! 🎵')
-        player = LavalinkPlayer(bot, guild)
+        player = LavalinkPlayer(bot, guild_id)
     else:
         logger.info(f'🎵 СОЗДАНИЕ MusicPlayer ДЛЯ СЕРВЕРА {guild.name} (id: {guild_id})!!! ВЕЛИКОЛЕПНОЕ ЗВУЧАНИЕ!!! 🎵')
-        player = MusicPlayer(bot, guild)
+        player = MusicPlayer(bot, guild_id)
     
     # 🔊 УСТАНАВЛИВАЕМ ГРОМКОСТЬ - В САМЫЙ РАЗ!!! 🔊
     await player.set_volume(DEFAULT_VOLUME)
@@ -161,6 +186,44 @@ bot.get_player = get_player
 # 🚀 ФУНКЦИЯ ЗАПУСКА БОТА - ГЛАВНЫЙ ЗАПУСКАТОР!!! 🚀
 async def main():
     """🏁 ОСНОВНАЯ ФУНКЦИЯ ЗАПУСКА БОТА - ВСЁ НАЧИНАЕТСЯ ЗДЕСЬ!!! 🏁"""
+    # 🔄 ИНИЦИАЛИЗАЦИЯ LAVALINK, ЕСЛИ ВКЛЮЧЕН!!! 🔄
+    if bot.use_lavalink and bot.lavalink_available:
+        try:
+            # 🚀 ИМПОРТИРУЕМ И ИНИЦИАЛИЗИРУЕМ WAVELINK!!! 🚀
+            import wavelink
+            
+            # 🏁 ЗАПУСКАЕМ LAVALINK СЕРВЕР, ЕСЛИ ТРЕБУЕТСЯ!!! 🏁
+            use_internal_lavalink = os.getenv('USE_INTERNAL_LAVALINK', 'true').lower() == 'true'
+            if use_internal_lavalink:
+                logger.info("🚀 ЗАПУСК ВСТРОЕННОГО LAVALINK СЕРВЕРА!!! ПОДОЖДИТЕ!!! 🚀")
+                await download_and_start_lavalink()
+                
+            # 🔌 НАСТРОЙКИ ПОДКЛЮЧЕНИЯ К LAVALINK!!! 🔌
+            lavalink_host = os.getenv('LAVALINK_HOST', 'localhost')
+            lavalink_port = int(os.getenv('LAVALINK_PORT', 2333))
+            lavalink_password = os.getenv('LAVALINK_PASSWORD', 'youshallnotpass')
+            lavalink_secure = os.getenv('LAVALINK_SECURE', 'false').lower() == 'true'
+            
+            # ⏱️ ПОДОЖДЕМ НЕМНОГО ДЛЯ ЗАПУСКА СЕРВЕРА!!! ⏱️
+            if use_internal_lavalink:
+                await asyncio.sleep(5)
+                
+            # 🔗 СОЗДАЕМ НОДУ WAVELINK!!! 🔗
+            bot.wavelink_node = await wavelink.NodePool.create_node(
+                bot=bot,
+                host=lavalink_host,
+                port=lavalink_port,
+                password=lavalink_password,
+                secure=lavalink_secure
+            )
+            
+            logger.info(f"✅ ПОДКЛЮЧЕНИЕ К LAVALINK СЕРВЕРУ УСПЕШНО!!! ГОТОВЫ К РАБОТЕ!!! ✅")
+        except Exception as e:
+            logger.error(f"❌ ОШИБКА ПРИ ИНИЦИАЛИЗАЦИИ LAVALINK: {e}!!! БУДЕТ ИСПОЛЬЗОВАН ОБЫЧНЫЙ ПЛЕЕР!!! ❌")
+            bot.use_lavalink = False
+            bot.lavalink_available = False
+            bot.wavelink_node = None
+    
     # 📥 ЗАГРУЗКА МОДУЛЕЙ С КОМАНДАМИ!!! 📥
     await load_extensions()
     
