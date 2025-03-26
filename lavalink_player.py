@@ -83,7 +83,18 @@ class LavalinkPlayer:
                 raise ValueError(f"❌ НЕ УДАЛОСЬ НАЙТИ ГОЛОСОВОЙ КАНАЛ С ID {self.voice_channel_id}!!! КАТАСТРОФА!!! ❌")
             
             # 🎵 ПОДКЛЮЧЕНИЕ ЧЕРЕЗ WAVELINK В ЗАВИСИМОСТИ ОТ ВЕРСИИ!!! 🎵
-            if WAVELINK_MAJOR >= 2:
+            if WAVELINK_MAJOR >= 3:
+                # Wavelink 3.x
+                self.player = await channel.connect(cls=wavelink.Player)
+                # Устанавливаем настройки для 3.x
+                if hasattr(self.player, 'set_volume'):
+                    await self.player.set_volume(50)
+                
+                # Регистрируем обработчик событий для Wavelink 3.x
+                self.bot.add_listener(self._on_wavelink_track_end, 'on_wavelink_track_end')
+                print(f"✅ Зарегистрирован обработчик событий on_wavelink_track_end для Wavelink 3.x")
+                
+            elif WAVELINK_MAJOR >= 2:
                 # Wavelink 2.x
                 self.player = await channel.connect(cls=wavelink.Player)
                 if hasattr(wavelink, 'AutoPlayMode'):
@@ -132,7 +143,29 @@ class LavalinkPlayer:
             self.skip_votes.clear()
             
             # 🎵 ВОСПРОИЗВОДИМ ПОТОК ЧЕРЕЗ LAVALINK В ЗАВИСИМОСТИ ОТ ВЕРСИИ!!! 🎵
-            if WAVELINK_MAJOR >= 2:
+            if WAVELINK_MAJOR >= 3:
+                # Wavelink 3.x
+                try:
+                    # Используем новый API Wavelink 3.x
+                    tracks = await wavelink.Playable.search(RADIO_STREAM_URL)
+                    if not tracks:
+                        print("⚠️ НЕ УДАЛОСЬ НАЙТИ ТРЕК ДЛЯ РАДИО!!! ⚠️")
+                        return False
+                        
+                    if isinstance(tracks, wavelink.Playlist):
+                        track = tracks.tracks[0]
+                    elif isinstance(tracks, list) and tracks:
+                        track = tracks[0]
+                    else:
+                        track = tracks
+
+                    # Используем правильный метод воспроизведения для Wavelink 3.x
+                    await self.player.play(track)
+                    print(f"✅ Запущено воспроизведение радио через Wavelink 3.x: {RADIO_NAME}")
+                except Exception as e:
+                    print(f"❌ ОШИБКА ПРИ ВОСПРОИЗВЕДЕНИИ ЧЕРЕЗ WAVELINK 3.x: {e}!!! ❌")
+                    return False
+            elif WAVELINK_MAJOR >= 2:
                 # Wavelink 2.x
                 try:
                     tracks = await wavelink.Playable.search(RADIO_STREAM_URL)
@@ -206,6 +239,32 @@ class LavalinkPlayer:
             print(f"Ошибка в обработчике окончания трека: {e}")
             await self.play_default_radio()
     
+    async def _on_wavelink_track_end(self, payload):
+        """Обработчик окончания трека для Wavelink 3.x"""
+        try:
+            # Проверка, относится ли событие к нашему плееру
+            if not hasattr(payload, 'player'):
+                print("❌ ОШИБКА: Объект payload не содержит атрибут player!")
+                return
+                
+            # В Wavelink 3.x нужно проверить совпадение гильдии плеера
+            if payload.player.guild.id != self.guild_id:
+                return
+                
+            print(f"🎵 Событие окончания трека для гильдии {self.guild_id}! Следующих треков в очереди: {len(self.queue)}")
+            
+            if self.queue:
+                # Воспроизведение следующего трека из очереди
+                next_track = self.queue.pop(0)
+                await self.play_track(next_track)
+            else:
+                # Возврат к радио по умолчанию
+                await self.play_default_radio()
+        except Exception as e:
+            print(f"❌ ОШИБКА В ОБРАБОТЧИКЕ ОКОНЧАНИЯ ТРЕКА WAVELINK 3.x: {e}!!! ❌")
+            # При ошибке возвращаемся к радио
+            await self.play_default_radio()
+    
     async def _handle_playback_error(self):
         """Обработка ошибок воспроизведения"""
         try:
@@ -228,7 +287,7 @@ class LavalinkPlayer:
     
     async def play_track(self, track_info):
         """Воспроизведение трека"""
-        if not self.player or not self.player.is_connected():
+        if not self.player or not hasattr(self.player, 'is_connected') or not self.player.is_connected():
             success = await self.connect()
             if not success:
                 return False
@@ -243,7 +302,15 @@ class LavalinkPlayer:
             if 'wavelink_track' in track_info:
                 track = track_info['wavelink_track']
             else:
-                tracks = await wavelink.Playable.search(track_info['url'])
+                # Поиск трека в зависимости от версии Wavelink
+                if WAVELINK_MAJOR >= 3:
+                    tracks = await wavelink.Playable.search(track_info['url'])
+                    if not tracks:
+                        print(f"⚠️ Не удалось найти трек по URL: {track_info['url']}")
+                        return False
+                else:
+                    tracks = await wavelink.Playable.search(track_info['url'])
+                
                 if isinstance(tracks, wavelink.Playlist):
                     track = tracks.tracks[0]
                 elif isinstance(tracks, list) and tracks:
@@ -281,7 +348,11 @@ class LavalinkPlayer:
                 
                 # Поиск трека через Lavalink (Wavelink)
                 search_query = f"{track_info['title']} {track_info['artist']}"
-                tracks = await wavelink.Playable.search(search_query)
+                
+                if WAVELINK_MAJOR >= 3:
+                    tracks = await wavelink.Playable.search(search_query)
+                else:
+                    tracks = await wavelink.Playable.search(search_query)
                 
                 if not tracks:
                     return False, "Не удалось найти трек."
@@ -309,8 +380,11 @@ class LavalinkPlayer:
                 return True, f"Трек {track_info['title']} добавлен в очередь."
             
             elif 'youtube.com' in query or 'youtu.be' in query or 'soundcloud.com' in query:
-                # Поиск через Lavalink
-                tracks = await wavelink.Playable.search(query)
+                # Поиск через Lavalink в зависимости от версии Wavelink
+                if WAVELINK_MAJOR >= 3:
+                    tracks = await wavelink.Playable.search(query)
+                else:
+                    tracks = await wavelink.Playable.search(query)
                 
                 if not tracks:
                     return False, "Не удалось найти трек."
@@ -356,7 +430,10 @@ class LavalinkPlayer:
             
             else:
                 # Обработка поискового запроса
-                tracks = await wavelink.Playable.search(query)
+                if WAVELINK_MAJOR >= 3:
+                    tracks = await wavelink.Playable.search(query)
+                else:
+                    tracks = await wavelink.Playable.search(query)
                 
                 if not tracks:
                     return False, "Не удалось найти трек."

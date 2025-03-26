@@ -216,7 +216,23 @@ async def main():
             # 🔗 СОЗДАЕМ НОДУ WAVELINK В ЗАВИСИМОСТИ ОТ ВЕРСИИ!!! 🔗
             major_version = int(wavelink_version.split('.')[0])
             
-            if major_version >= 2:
+            if major_version >= 3:
+                # Используем API из wavelink 3.x
+                try:
+                    # Создаем узел для Wavelink 3.x (новый синтаксис)
+                    node = wavelink.Node(
+                        uri=f"{'ws' if not lavalink_secure else 'wss'}://{lavalink_host}:{lavalink_port}",
+                        password=lavalink_password
+                    )
+                    
+                    # Прямая интеграция с клиентом
+                    await wavelink.Pool.connect(nodes=[node], client=bot)
+                    bot.wavelink_node = node
+                    logger.info(f"✅ ПОДКЛЮЧЕНИЕ К LAVALINK ЧЕРЕЗ WAVELINK 3.x УСПЕШНО!!! ✅")
+                except Exception as e:
+                    logger.error(f"❌ ОШИБКА ПРИ ПОДКЛЮЧЕНИИ С WAVELINK 3.x: {e}!!! ❌")
+                    raise
+            elif major_version >= 2:
                 # Используем новый API из wavelink 2.x
                 bot.wavelink_node = await wavelink.NodePool.create_node(
                     bot=bot,
