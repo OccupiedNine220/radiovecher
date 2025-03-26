@@ -191,6 +191,11 @@ async def main():
         try:
             # 🚀 ИМПОРТИРУЕМ И ИНИЦИАЛИЗИРУЕМ WAVELINK!!! 🚀
             import wavelink
+            import pkg_resources
+            
+            # Получаем версию wavelink
+            wavelink_version = pkg_resources.get_distribution("wavelink").version
+            logger.info(f"📊 ВЕРСИЯ WAVELINK: {wavelink_version}!!! ПРОВЕРЯЕМ СОВМЕСТИМОСТЬ!!! 📊")
             
             # 🏁 ЗАПУСКАЕМ LAVALINK СЕРВЕР, ЕСЛИ ТРЕБУЕТСЯ!!! 🏁
             use_internal_lavalink = os.getenv('USE_INTERNAL_LAVALINK', 'true').lower() == 'true'
@@ -208,14 +213,27 @@ async def main():
             if use_internal_lavalink:
                 await asyncio.sleep(5)
                 
-            # 🔗 СОЗДАЕМ НОДУ WAVELINK!!! 🔗
-            bot.wavelink_node = await wavelink.NodePool.create_node(
-                bot=bot,
-                host=lavalink_host,
-                port=lavalink_port,
-                password=lavalink_password,
-                secure=lavalink_secure
-            )
+            # 🔗 СОЗДАЕМ НОДУ WAVELINK В ЗАВИСИМОСТИ ОТ ВЕРСИИ!!! 🔗
+            major_version = int(wavelink_version.split('.')[0])
+            
+            if major_version >= 2:
+                # Используем новый API из wavelink 2.x
+                bot.wavelink_node = await wavelink.NodePool.create_node(
+                    bot=bot,
+                    host=lavalink_host,
+                    port=lavalink_port,
+                    password=lavalink_password,
+                    secure=lavalink_secure
+                )
+            else:
+                # Используем старый API из wavelink 1.x
+                bot.wavelink_node = await wavelink.connect(
+                    client=bot,
+                    host=lavalink_host,
+                    port=lavalink_port,
+                    password=lavalink_password,
+                    secure=lavalink_secure
+                )
             
             logger.info(f"✅ ПОДКЛЮЧЕНИЕ К LAVALINK СЕРВЕРУ УСПЕШНО!!! ГОТОВЫ К РАБОТЕ!!! ✅")
         except Exception as e:

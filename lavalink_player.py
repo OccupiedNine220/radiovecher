@@ -2,33 +2,43 @@ import asyncio
 import discord
 import wavelink
 import os
+import pkg_resources
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 from dotenv import load_dotenv
 from typing import Optional, Dict, List, Union, Set
 
-# Загрузка переменных окружения
+# 🔑 ЗАГРУЗКА ПЕРЕМЕННЫХ ОКРУЖЕНИЯ - КРИТИЧЕСКИ ВАЖНО!!! 🔑
 load_dotenv()
 
-# Настройка Spotify API
+# 🎵 НАСТРОЙКА SPOTIFY API - ДЛЯ РАБОТЫ С ПЛЕЙЛИСТАМИ SPOTIFY!!! 🎵
 SPOTIFY_CLIENT_ID = os.getenv('SPOTIFY_CLIENT_ID')
 SPOTIFY_CLIENT_SECRET = os.getenv('SPOTIFY_CLIENT_SECRET')
 
-# Настройки радио из .env
+# 📻 НАСТРОЙКИ РАДИО ИЗ .ENV - НАСТРОЙ КАК ХОЧЕШЬ!!! 📻
 RADIO_STREAM_URL = os.getenv('RADIO_STREAM_URL', 'https://rusradio.hostingradio.ru/rusradio96.aacp')
 RADIO_NAME = os.getenv('RADIO_NAME', 'Русское Радио')
 RADIO_THUMBNAIL = os.getenv('RADIO_THUMBNAIL', 'https://rusradio.ru/design/images/share.jpg')
 
-# Настройки Lavalink
+# ⚙️ НАСТРОЙКИ LAVALINK - ТОНКАЯ НАСТРОЙКА СЕРВЕРА!!! ⚙️
 LAVALINK_HOST = os.getenv('LAVALINK_HOST', 'localhost')
 LAVALINK_PORT = int(os.getenv('LAVALINK_PORT', 2333))
 LAVALINK_PASSWORD = os.getenv('LAVALINK_PASSWORD', 'youshallnotpass')
 LAVALINK_SECURE = os.getenv('LAVALINK_SECURE', 'false').lower() == 'true'
 
-# Добавляем конфигурацию для использования встроенного сервера (для Windows совместимость)
+# 🔄 НАСТРОЙКИ ВСТРОЕННОГО LAVALINK - ДЛЯ МАКСИМАЛЬНОГО УДОБСТВА!!! 🔄
 USE_INTERNAL_LAVALINK = os.getenv('USE_INTERNAL_LAVALINK', 'true').lower() == 'true'
 LAVALINK_JAR_PATH = os.getenv('LAVALINK_JAR_PATH', './Lavalink.jar')
 LAVALINK_DOWNLOAD_URL = os.getenv('LAVALINK_DOWNLOAD_URL', 'https://github.com/lavalink-devs/Lavalink/releases/download/3.7.8/Lavalink.jar')
+
+# 🔍 ОПРЕДЕЛЕНИЕ ВЕРСИИ WAVELINK - ДЛЯ СОВМЕСТИМОСТИ!!! 🔍
+try:
+    WAVELINK_VERSION = pkg_resources.get_distribution("wavelink").version
+    WAVELINK_MAJOR = int(WAVELINK_VERSION.split('.')[0])
+    print(f"🎯 Обнаружена версия Wavelink: {WAVELINK_VERSION} (Major: {WAVELINK_MAJOR})")
+except Exception as e:
+    print(f"⚠️ Ошибка при определении версии Wavelink: {e}")
+    WAVELINK_MAJOR = 1  # По умолчанию предполагаем версию 1.x
 
 class LavalinkPlayer:
     def __init__(self, bot, guild_id):
@@ -43,10 +53,10 @@ class LavalinkPlayer:
         self.reconnect_attempts = 0
         self.max_reconnect_attempts = 5
         self.is_paused = False
-        self.skip_votes = set()  # Множество ID пользователей, проголосовавших за пропуск
-        self.votes_required = 3  # Количество голосов, необходимое для пропуска
+        self.skip_votes = set()  # 🗳️ МНОЖЕСТВО ID ПОЛЬЗОВАТЕЛЕЙ, ПРОГОЛОСОВАВШИХ ЗА ПРОПУСК!!! 🗳️
+        self.votes_required = 3  # 🔢 КОЛИЧЕСТВО ГОЛОСОВ, НЕОБХОДИМОЕ ДЛЯ ПРОПУСКА!!! ДЕМОКРАТИЯ!!! 🔢
         
-        # Настройка Spotify клиента
+        # 🎵 НАСТРОЙКА SPOTIFY КЛИЕНТА - ДЛЯ ВОСПРОИЗВЕДЕНИЯ С SPOTIFY!!! 🎵
         if SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET:
             self.sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
                 client_id=SPOTIFY_CLIENT_ID,
@@ -56,11 +66,11 @@ class LavalinkPlayer:
             self.sp = None
     
     async def connect(self):
-        """Подключение к голосовому каналу"""
+        """🔌 ПОДКЛЮЧЕНИЕ К ГОЛОСОВОМУ КАНАЛУ - ПЕРВЫЙ ШАГ К ИДЕАЛЬНОЙ МУЗЫКЕ!!! 🔌"""
         try:
-            # Проверяем, указан ли ID голосового канала
+            # 🔍 ПРОВЕРЯЕМ, УКАЗАН ЛИ ID ГОЛОСОВОГО КАНАЛА!!! 🔍
             if not self.voice_channel_id:
-                print(f"Ошибка: ID голосового канала не указан для сервера {self.guild_id}")
+                print(f"❌ ОШИБКА: ID ГОЛОСОВОГО КАНАЛА НЕ УКАЗАН ДЛЯ СЕРВЕРА {self.guild_id}!!! ❌")
                 return False
                 
             channel = self.bot.get_channel(self.voice_channel_id)
@@ -70,32 +80,42 @@ class LavalinkPlayer:
                     channel = guild.get_channel(self.voice_channel_id)
             
             if not channel:
-                raise ValueError(f"Не удалось найти голосовой канал с ID {self.voice_channel_id}")
+                raise ValueError(f"❌ НЕ УДАЛОСЬ НАЙТИ ГОЛОСОВОЙ КАНАЛ С ID {self.voice_channel_id}!!! КАТАСТРОФА!!! ❌")
             
-            # Подключение через Wavelink
-            self.player = await channel.connect(cls=wavelink.Player)
-            
-            # Установка обработчика событий
-            self.player.autoplay = wavelink.AutoPlayMode.disabled
-            
-            # Регистрируем обработчик окончания трека
-            self.player.queue.callback = self._on_track_end
+            # 🎵 ПОДКЛЮЧЕНИЕ ЧЕРЕЗ WAVELINK В ЗАВИСИМОСТИ ОТ ВЕРСИИ!!! 🎵
+            if WAVELINK_MAJOR >= 2:
+                # Wavelink 2.x
+                self.player = await channel.connect(cls=wavelink.Player)
+                if hasattr(wavelink, 'AutoPlayMode'):
+                    self.player.autoplay = wavelink.AutoPlayMode.disabled
+                self.player.queue.callback = self._on_track_end
+            else:
+                # Wavelink 1.x
+                self.player = await channel.connect(cls=wavelink.Player)
+                # Настройки для Wavelink 1.x
+                self.player.set_volume(50)
             
             self.reconnect_attempts = 0
             return True
         except Exception as e:
-            print(f"Ошибка при подключении к голосовому каналу: {e}")
+            print(f"⚠️ ОШИБКА ПРИ ПОДКЛЮЧЕНИИ К ГОЛОСОВОМУ КАНАЛУ: {e}!!! СРОЧНО ИСПРАВЬ!!! ⚠️")
             return False
     
     async def disconnect(self):
-        """Отключение от голосового канала"""
-        if self.player and self.player.is_connected():
-            await self.player.disconnect()
-            self.player = None
+        """🔌 ОТКЛЮЧЕНИЕ ОТ ГОЛОСОВОГО КАНАЛА - ПРОЩАЕМСЯ КРАСИВО!!! 🔌"""
+        if self.player:
+            try:
+                if hasattr(self.player, 'is_connected') and callable(self.player.is_connected) and self.player.is_connected():
+                    await self.player.disconnect()
+                elif hasattr(self.player, 'disconnect') and callable(self.player.disconnect):
+                    await self.player.disconnect()
+                self.player = None
+            except Exception as e:
+                print(f"⚠️ ОШИБКА ПРИ ОТКЛЮЧЕНИИ ОТ ГОЛОСОВОГО КАНАЛА: {e}!!! ⚠️")
     
     async def play_default_radio(self):
-        """Воспроизведение радио по умолчанию"""
-        if not self.player or not self.player.is_connected():
+        """📻 ВОСПРОИЗВЕДЕНИЕ РАДИО ПО УМОЛЧАНИЮ - ЛУЧШАЯ МУЗЫКА БЕЗ ПРОБЛЕМ!!! 📻"""
+        if not self.player:
             success = await self.connect()
             if not success:
                 return False
@@ -108,27 +128,64 @@ class LavalinkPlayer:
                 'source': 'stream'
             }
             
-            # Сбрасываем голоса при возврате к радио
+            # 🗑️ СБРАСЫВАЕМ ГОЛОСА ПРИ ВОЗВРАТЕ К РАДИО!!! 🗑️
             self.skip_votes.clear()
             
-            # Воспроизводим поток через Lavalink
-            tracks = await wavelink.Playable.search(RADIO_STREAM_URL)
-            if isinstance(tracks, wavelink.Playlist):
-                track = tracks.tracks[0]
-            elif isinstance(tracks, list) and tracks:
-                track = tracks[0]
+            # 🎵 ВОСПРОИЗВОДИМ ПОТОК ЧЕРЕЗ LAVALINK В ЗАВИСИМОСТИ ОТ ВЕРСИИ!!! 🎵
+            if WAVELINK_MAJOR >= 2:
+                # Wavelink 2.x
+                try:
+                    tracks = await wavelink.Playable.search(RADIO_STREAM_URL)
+                    if isinstance(tracks, wavelink.Playlist):
+                        track = tracks.tracks[0]
+                    elif isinstance(tracks, list) and tracks:
+                        track = tracks[0]
+                    else:
+                        track = tracks
+                    
+                    await self.player.play(track)
+                except AttributeError:
+                    # Fallback для других подверсий Wavelink 2.x
+                    tracks = await wavelink.YouTubeTrack.search(RADIO_STREAM_URL)
+                    if tracks:
+                        track = tracks[0]
+                        await self.player.play(track)
+                    else:
+                        print("⚠️ НЕ УДАЛОСЬ НАЙТИ ТРЕК!!! ⚠️")
+                        return False
             else:
-                track = tracks
+                # Wavelink 1.x
+                try:
+                    tracks = await wavelink.NodePool.get_node().get_tracks(wavelink.TrackType.search, RADIO_STREAM_URL)
+                    if tracks:
+                        track = tracks[0]
+                        await self.player.play(track)
+                    else:
+                        print("⚠️ НЕ УДАЛОСЬ НАЙТИ ТРЕК!!! ⚠️")
+                        return False
+                except Exception as e:
+                    print(f"⚠️ ОШИБКА ПРИ ПОИСКЕ ТРЕКА: {e}!!! ⚠️")
+                    # Еще один fallback для Wavelink 1.x
+                    try:
+                        tracks = await self.bot.wavelink_node.get_tracks(RADIO_STREAM_URL)
+                        if tracks:
+                            track = tracks[0]
+                            await self.player.play(track)
+                        else:
+                            print("⚠️ НЕ УДАЛОСЬ НАЙТИ ТРЕК!!! ⚠️")
+                            return False
+                    except Exception as e:
+                        print(f"⚠️ КРИТИЧЕСКАЯ ОШИБКА ПРИ ПОИСКЕ ТРЕКА: {e}!!! ⚠️")
+                        return False
             
-            await self.player.play(track)
             self.is_playing = True
             self.is_paused = False
             
-            # Отправка информации о текущем треке
+            # 📨 ОТПРАВКА ИНФОРМАЦИИ О ТЕКУЩЕМ ТРЕКЕ!!! 📨
             await self.send_now_playing_embed()
             return True
         except Exception as e:
-            print(f"Ошибка при воспроизведении радио: {e}")
+            print(f"❌ ОШИБКА ПРИ ВОСПРОИЗВЕДЕНИИ РАДИО: {e}!!! НЕ ПАНИКУЙ, СЕЙЧАС ПОЧИНИМ!!! ❌")
             self.reconnect_attempts += 1
             if self.reconnect_attempts < self.max_reconnect_attempts:
                 await asyncio.sleep(2)
